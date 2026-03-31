@@ -30,7 +30,7 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_ALL_ORIGINS = False
 
 STATIC_URL = '/static/'
-STATIC_ROOT = '/home/odette/odette-backend/staticfiles'
+STATIC_ROOT = '/home/odette/odette-be/staticfiles'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/home/odette/odette-backend/media'
+MEDIA_ROOT = '/home/odette/odette-be/media'
