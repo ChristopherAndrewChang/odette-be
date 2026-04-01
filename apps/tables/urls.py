@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     TableListCreateView,
     TableBulkCreateView,
+    TableDetailView,
     GenerateQRView,
     BulkGenerateQRView,
     OpenNightView,
@@ -16,5 +17,6 @@ urlpatterns = [
     path('open-night/', OpenNightView.as_view()),
     path('close-night/', CloseNightView.as_view()),
     path('scan/', ScanQRView.as_view()),
+    path('<int:pk>/', TableDetailView.as_view()),
     path('<int:pk>/generate-qr/', GenerateQRView.as_view()),
 ]

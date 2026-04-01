@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
 from apps.users.permissions import IsStaff, IsSuperuser
+from apps.core.pagination import StandardPagination
 from .models import MainCategory, SubCategory, MenuItem, MenuPDF
 from .serializers import (
     MainCategorySerializer, MainCategoryWriteSerializer,
@@ -76,7 +77,10 @@ class MenuPDFListView(APIView):
         if not (request.user.is_authenticated and hasattr(request.user, 'role')):
             pdfs = pdfs.filter(is_active=True)
 
-        return Response([
+        paginator = StandardPagination()
+        paginated = paginator.paginate_queryset(pdfs, request)
+
+        data = [
             {
                 'id': pdf.id,
                 'pdf_type': pdf.pdf_type,
@@ -84,8 +88,10 @@ class MenuPDFListView(APIView):
                 'is_active': pdf.is_active,
                 'uploaded_at': pdf.uploaded_at,
             }
-            for pdf in pdfs
-        ])
+            for pdf in paginated
+        ]
+
+        return paginator.get_paginated_response(data)
 
 
 class MenuPDFToggleView(APIView):

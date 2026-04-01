@@ -157,7 +157,7 @@ class GenerateQRView(APIView):
     permission_classes = [IsStaff]
 
     def post(self, request, pk):
-        table = get_object_or_404(Table, pk=pk)
+        table = get_object_or_404(Table, pk=pk, is_active=True)
 
         # invalidate old invites
         TableInvite.objects.filter(table=table, is_active=True).update(is_active=False)
@@ -271,3 +271,24 @@ class ScanQRView(APIView):
             'table_number': invite.table.number,
             'expires_at': session.expires_at,
         })
+
+
+class TableDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def get_object(self, pk):
+        return get_object_or_404(Table, pk=pk)
+
+    def patch(self, request, pk):
+        table = self.get_object(pk)
+        serializer = TableSerializer(table, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        table = self.get_object(pk)
+        table.is_active = False
+        table.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
