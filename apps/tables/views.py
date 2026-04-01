@@ -55,9 +55,9 @@ def generate_qr_pdf(tables_with_tokens):
 
     c = canvas.Canvas(buffer, pagesize=(receipt_width, total_height))
 
-    # odd day = table number on top, even day = table number on bottom
     today = date.today()
     table_on_top = today.day % 2 != 0
+    date_str = today.strftime("%d %b %Y")  # e.g. "01 Apr 2026"
 
     for idx, (table_number, token) in enumerate(tables_with_tokens):
         y_start = total_height - (idx + 1) * receipt_height
@@ -84,6 +84,11 @@ def generate_qr_pdf(tables_with_tokens):
             c.drawCentredString(receipt_width / 2, qr_y - 5 * mm, "Scan for interactive menu")
         else:
             c.drawCentredString(receipt_width / 2, qr_y + qr_size + 4 * mm, "Scan for interactive menu")
+
+        # date at very bottom — small
+        c.setFont("Helvetica", 6)
+        c.setFillColorRGB(0.6, 0.6, 0.6)
+        c.drawCentredString(receipt_width / 2, y_start + 2 * mm, date_str)
 
         # dotted tear line
         if idx < len(tables_with_tokens) - 1:
