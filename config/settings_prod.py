@@ -31,6 +31,16 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://changky.com',
+    'https://www.changky.com',
+    'https://api.changky.com',
+    'http://localhost:3010',
+    'http://localhost:3000',
+    'http://127.0.0.1:3010',
+    'http://127.0.0.1:3000',
+]
+
 CORS_ALLOW_ALL_ORIGINS = False
 
 STATIC_URL = '/static/'
