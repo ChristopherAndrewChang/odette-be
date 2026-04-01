@@ -157,8 +157,13 @@ class GenerateQRView(APIView):
     permission_classes = [IsStaff]
 
     def post(self, request, pk):
-        table = get_object_or_404(Table, pk=pk, is_active=True)
+        table = Table.objects.filter(pk=pk, is_active=True).first()
 
+        if not table:
+            return Response(
+                {'error': 'Table not found or inactive'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         # invalidate old invites
         TableInvite.objects.filter(table=table, is_active=True).update(is_active=False)
 
