@@ -36,7 +36,7 @@ class AdminAccountDetailView(APIView):
 
     def get_object(self, pk):
         try:
-            return User.objects.get(pk=pk, role=User.ROLE_ADMIN)
+            return User.objects.get(pk=pk, role__in=[User.ROLE_ADMIN, User.ROLE_DJ])
         except User.DoesNotExist:
             return None
 
