@@ -5,14 +5,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from apps.users.permissions import IsStaff
 from apps.tables.models import CustomerSession
+from apps.core.pagination import StandardPagination
 from .models import SongRequest
 from .serializers import SongRequestSerializer, SongRequestCreateSerializer
-from apps.core.pagination import StandardPagination
 
 
 class SongRequestListView(APIView):
     """Staff sees all requests. Customers see only their own."""
-    pagination_class = StandardPagination
 
     def get_permissions(self):
         return [AllowAny()]
@@ -21,7 +20,6 @@ class SongRequestListView(APIView):
         session_token = request.headers.get('X-Session-Token')
 
         if session_token:
-            # customer — only their own requests
             try:
                 session = CustomerSession.objects.get(
                     session_token=session_token,
@@ -39,14 +37,24 @@ class SongRequestListView(APIView):
                 'session__table'
             ).all()
 
-            # DJ can only see approved requests
             if request.user.role == 'dj':
                 requests = requests.filter(status=SongRequest.STATUS_APPROVED)
             else:
-                # admin/superuser can filter by any status
                 status_filter = request.query_params.get('status')
                 if status_filter:
                     requests = requests.filter(status=status_filter)
+
+                date_filter = request.query_params.get('date')
+                show_all = request.query_params.get('all')
+
+                if show_all:
+                    pass
+                elif date_filter:
+                    requests = requests.filter(created_at__date=date_filter)
+                else:
+                    requests = requests.filter(
+                        created_at__date=timezone.now().date()
+                    )
 
         else:
             return Response(
@@ -54,8 +62,10 @@ class SongRequestListView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        serializer = SongRequestSerializer(requests, many=True)
-        return Response(serializer.data)
+        paginator = StandardPagination()
+        paginated = paginator.paginate_queryset(requests, request)
+        serializer = SongRequestSerializer(paginated, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
         session_token = request.headers.get('X-Session-Token')
