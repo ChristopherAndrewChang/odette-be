@@ -41,6 +41,25 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:3000',
 ]
 
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'accept-language',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-session-token',
+    'ngrok-skip-browser-warning',
+    'sec-ch-ua',
+    'sec-ch-ua-mobile',
+    'sec-ch-ua-platform',
+    'referer',
+]
+
 CORS_ALLOW_ALL_ORIGINS = False
 
 STATIC_URL = '/static/'
