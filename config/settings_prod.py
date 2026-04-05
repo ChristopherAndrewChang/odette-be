@@ -67,3 +67,6 @@ STATIC_ROOT = '/home/odette/odette-be/staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = '/home/odette/odette-be/media'
+
+TIME_ZONE = 'Asia/Jakarta'
+USE_TZ = True

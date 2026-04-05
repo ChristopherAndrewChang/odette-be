@@ -55,9 +55,9 @@ def generate_qr_pdf(tables_with_tokens):
 
     c = canvas.Canvas(buffer, pagesize=(receipt_width, total_height))
 
-    today = date.today()
+    today = timezone.localtime(timezone.now()).date()
+    date_str = today.strftime("%d %b %Y")
     table_on_top = today.day % 2 != 0
-    date_str = today.strftime("%d %b %Y")  # e.g. "01 Apr 2026"
 
     for idx, (table_number, token) in enumerate(tables_with_tokens):
         y_start = total_height - (idx + 1) * receipt_height
