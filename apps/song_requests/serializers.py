@@ -5,15 +5,19 @@ from .models import SongRequest
 class SongRequestSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='session.customer_name', read_only=True)
     table_number = serializers.IntegerField(source='session.table.number', read_only=True)
+    status_display = serializers.SerializerMethodField()
 
     class Meta:
         model = SongRequest
         fields = [
             'id', 'song_title', 'artist', 'donation_amount',
-            'status', 'customer_name', 'table_number',
-            'reviewed_at', 'created_at',
+            'status', 'status_display', 'customer_name', 'table_number',
+            'admin_reviewed_at', 'dj_reviewed_at', 'created_at',
         ]
-        read_only_fields = ['status', 'reviewed_at', 'created_at']
+        read_only_fields = ['status', 'admin_reviewed_at', 'dj_reviewed_at', 'created_at']
+
+    def get_status_display(self, obj):
+        return obj.get_status_display_id()
 
 
 class SongRequestCreateSerializer(serializers.ModelSerializer):
@@ -28,12 +32,12 @@ class SongRequestCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         session = self.context.get('session')
-        # check max 5 requests per session
         count = SongRequest.objects.filter(
             session=session,
             status__in=[
                 SongRequest.STATUS_PENDING,
-                SongRequest.STATUS_APPROVED,
+                SongRequest.STATUS_ADMIN_APPROVED,
+                SongRequest.STATUS_DJ_APPROVED,
             ]
         ).count()
         if count >= 5:
