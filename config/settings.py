@@ -175,8 +175,8 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 
-FRONTEND_URL = 'http://localhost:3000'  # change later
-BASE_URL = 'http://localhost:8000'      # change later
+FRONTEND_URL = 'https://app.changky.com'  # change later
+BASE_URL = 'https://changky.com'      # change later
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=8),
