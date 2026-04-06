@@ -34,7 +34,7 @@ def get_expiry():
 
 def generate_qr_image(token, table_number):
     """Generate QR code image as BytesIO."""
-    scan_url = f"{settings.FRONTEND_URL}/scan?token={token}"
+    scan_url = f"{settings.FRONTEND_URL}/user/scan?token={token}"
     qr = qrcode.QRCode(box_size=10, border=4)
     qr.add_data(scan_url)
     qr.make(fit=True)
