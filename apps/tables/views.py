@@ -45,6 +45,99 @@ def generate_qr_image(token, table_number):
     return buffer
 
 
+def generate_qr_receipt_image(table_number, token):
+    """Generate a single receipt PNG sized for 58mm thermal printer."""
+    from PIL import Image, ImageDraw, ImageFont
+    import urllib.request
+    import os
+
+    width = 464  # 58mm at 203dpi
+    today = timezone.localtime(timezone.now()).date()
+    table_on_top = today.day % 2 != 0
+    date_str = today.strftime("%d %b %Y")
+
+    # generate QR
+    scan_url = f"{settings.FRONTEND_URL}/scan?token={token}"
+    qr = qrcode.QRCode(box_size=6, border=2, error_correction=qrcode.constants.ERROR_CORRECT_M)
+    qr.add_data(scan_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+    qr_size = width - 40
+    qr_img = qr_img.resize((qr_size, qr_size), Image.LANCZOS)
+
+    # find font
+    font_paths_bold = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+    ]
+    font_paths_regular = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+    ]
+
+    font_large = None
+    font_small = None
+
+    for path in font_paths_bold:
+        if os.path.exists(path):
+            font_large = ImageFont.truetype(path, 52)
+            break
+
+    for path in font_paths_regular:
+        if os.path.exists(path):
+            font_small = ImageFont.truetype(path, 26)
+            break
+
+    if not font_large:
+        font_large = ImageFont.load_default(size=52)
+    if not font_small:
+        font_small = ImageFont.load_default(size=26)
+
+    padding = 20
+    text_area = 80
+    date_area = 40
+    total_height = text_area + qr_size + date_area + padding * 2
+
+    img = Image.new("RGB", (width, total_height), "white")
+    draw = ImageDraw.Draw(img)
+
+    table_text = f"TABLE {table_number}"
+    scan_text = "Scan for interactive menu"
+
+    def center_text(text, font, y, color="black"):
+        bbox = draw.textbbox((0, 0), text, font=font)
+        w = bbox[2] - bbox[0]
+        draw.text(((width - w) // 2, y), text, fill=color, font=font)
+
+    if table_on_top:
+        # table number top
+        center_text(table_text, font_large, padding)
+        # QR below table number
+        img.paste(qr_img, ((width - qr_size) // 2, text_area))
+        # scan text below QR
+        center_text(scan_text, font_small, text_area + qr_size + 8, color="#555555")
+        # date at very bottom
+        center_text(date_str, font_small, text_area + qr_size + 40, color="#AAAAAA")
+    else:
+        # QR on top
+        img.paste(qr_img, ((width - qr_size) // 2, padding))
+        # scan text below QR
+        center_text(scan_text, font_small, padding + qr_size + 8, color="#555555")
+        # table number at bottom
+        center_text(table_text, font_large, padding + qr_size + 40)
+        # date at very bottom
+        center_text(date_str, font_small, padding + qr_size + 100, color="#AAAAAA")
+
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG', dpi=(203, 203))
+    buffer.seek(0)
+    return buffer
+
+
 def generate_qr_pdf(tables_with_tokens):
     from datetime import date
     buffer = io.BytesIO()
@@ -153,7 +246,7 @@ class TableBulkCreateView(APIView):
 
 
 class GenerateQRView(APIView):
-    """Generate QR for a single table — returns printable A4 PDF."""
+    """Generate QR for a single table — returns PNG image."""
     permission_classes = [IsStaff]
 
     def post(self, request, pk):
@@ -164,22 +257,19 @@ class GenerateQRView(APIView):
                 {'error': 'Table not found or inactive'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        # invalidate old invites
-        TableInvite.objects.filter(table=table, is_active=True).update(is_active=False)
 
-        # create new invite
+        TableInvite.objects.filter(table=table, is_active=True).update(is_active=False)
         invite = TableInvite.objects.create(table=table, created_by=request.user)
 
-        # generate PDF
-        pdf_buffer = generate_qr_pdf([(table.number, str(invite.token))])
+        img_buffer = generate_qr_receipt_image(table.number, str(invite.token))
 
-        response = HttpResponse(pdf_buffer, content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="table_{table.number}_qr.pdf"'
+        response = HttpResponse(img_buffer, content_type='image/png')
+        response['Content-Disposition'] = f'attachment; filename="table_{table.number}.png"'
         return response
 
 
 class BulkGenerateQRView(APIView):
-    """Generate QR for all tables — returns single printable PDF."""
+    """Generate QR for all tables — returns ZIP of individual PNG images."""
     permission_classes = [IsStaff]
 
     def post(self, request):
@@ -191,20 +281,28 @@ class BulkGenerateQRView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # invalidate all old invites
         TableInvite.objects.filter(is_active=True).update(is_active=False)
 
-        # create new invites for all tables
-        invites = []
-        for table in tables:
-            invite = TableInvite.objects.create(table=table, created_by=request.user)
-            invites.append((table.number, str(invite.token)))
+        zip_buffer = io.BytesIO()
 
-        # generate single PDF with all QRs
-        pdf_buffer = generate_qr_pdf(invites)
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for table in tables:
+                invite = TableInvite.objects.create(
+                    table=table,
+                    created_by=request.user
+                )
+                img_buffer = generate_qr_receipt_image(
+                    table.number,
+                    str(invite.token)
+                )
+                zip_file.writestr(
+                    f'table_{table.number:03d}.png',
+                    img_buffer.read()
+                )
 
-        response = HttpResponse(pdf_buffer, content_type='application/pdf')
-        response['Content-Disposition'] = 'inline; filename="all_tables_qr.pdf"'
+        zip_buffer.seek(0)
+        response = HttpResponse(zip_buffer, content_type='application/zip')
+        response['Content-Disposition'] = 'attachment; filename="qrcodes.zip"'
         return response
 
 
