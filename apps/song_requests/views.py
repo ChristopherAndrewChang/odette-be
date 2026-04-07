@@ -38,7 +38,6 @@ class SongRequestListView(APIView):
             ).all()
 
             if request.user.role == 'dj':
-                # DJ only sees admin_approved songs
                 requests = requests.filter(status=SongRequest.STATUS_ADMIN_APPROVED)
             else:
                 status_filter = request.query_params.get('status')

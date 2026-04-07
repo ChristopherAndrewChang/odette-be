@@ -20,7 +20,6 @@ class ScreenRequestListView(APIView):
         session_token = request.headers.get('X-Session-Token')
 
         if session_token:
-            # customer — only their own requests
             try:
                 session = CustomerSession.objects.get(
                     session_token=session_token,
@@ -37,9 +36,22 @@ class ScreenRequestListView(APIView):
             requests = ScreenRequest.objects.select_related(
                 'session__table'
             ).all()
+
             status_filter = request.query_params.get('status')
             if status_filter:
                 requests = requests.filter(status=status_filter)
+
+            date_filter = request.query_params.get('date')
+            show_all = request.query_params.get('all')
+
+            if show_all:
+                pass
+            elif date_filter:
+                requests = requests.filter(created_at__date=date_filter)
+            else:
+                requests = requests.filter(
+                    created_at__date=timezone.now().date()
+                )
 
         else:
             return Response(
