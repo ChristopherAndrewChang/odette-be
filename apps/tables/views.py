@@ -51,7 +51,7 @@ def generate_qr_receipt_image(table_number, token):
     import urllib.request
     import os
 
-    width = 464  # 58mm at 203dpi
+    width = 696  # 58mm at 203dpi
     today = timezone.localtime(timezone.now()).date()
     table_on_top = today.day % 2 != 0
     date_str = today.strftime("%d %b %Y")
