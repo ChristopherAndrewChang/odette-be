@@ -51,13 +51,13 @@ def generate_qr_receipt_image(table_number, token):
     import urllib.request
     import os
 
-    width = 696  # 58mm at 203dpi
+    width = 576  # 58mm at 203dpi
     today = timezone.localtime(timezone.now()).date()
     table_on_top = today.day % 2 != 0
     date_str = today.strftime("%d %b %Y")
 
     # generate QR
-    scan_url = f"{settings.FRONTEND_URL}/scan?token={token}"
+    scan_url = f"{settings.FRONTEND_URL}/user/scan?token={token}"
     qr = qrcode.QRCode(box_size=6, border=2, error_correction=qrcode.constants.ERROR_CORRECT_M)
     qr.add_data(scan_url)
     qr.make(fit=True)
