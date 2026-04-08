@@ -31,12 +31,10 @@ class TableInvite(models.Model):
 
 
 class CustomerSession(models.Model):
-    invite = models.OneToOneField(
+    invite = models.ForeignKey(
         TableInvite,
         on_delete=models.CASCADE,
-        related_name='session',
-        null=True,
-        blank=True
+        related_name='sessions'
     )
     table = models.ForeignKey(Table, on_delete=models.CASCADE, related_name='sessions')
     customer_name = models.CharField(max_length=100)
