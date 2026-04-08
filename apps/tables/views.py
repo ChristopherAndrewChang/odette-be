@@ -269,7 +269,7 @@ class GenerateQRView(APIView):
 
 
 class BulkGenerateQRView(APIView):
-    """Generate QR for all tables — returns ZIP of individual PNG images."""
+    """Generate QR for all tables — returns multi-page PDF, one QR per page."""
     permission_classes = [IsStaff]
 
     def post(self, request):
@@ -283,26 +283,77 @@ class BulkGenerateQRView(APIView):
 
         TableInvite.objects.filter(is_active=True).update(is_active=False)
 
-        zip_buffer = io.BytesIO()
+        receipt_width = 58 * mm
+        receipt_height = 80 * mm
 
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for table in tables:
-                invite = TableInvite.objects.create(
-                    table=table,
-                    created_by=request.user
-                )
-                img_buffer = generate_qr_receipt_image(
-                    table.number,
-                    str(invite.token)
-                )
-                zip_file.writestr(
-                    f'table_{table.number:03d}.png',
-                    img_buffer.read()
-                )
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=(receipt_width, receipt_height))
 
-        zip_buffer.seek(0)
-        response = HttpResponse(zip_buffer, content_type='application/zip')
-        response['Content-Disposition'] = 'attachment; filename="qrcodes.zip"'
+        today = timezone.localtime(timezone.now()).date()
+        table_on_top = today.day % 2 != 0
+        date_str = today.strftime("%d %b %Y")
+
+        qr_size = 42 * mm  # changed from 46
+        qr_x = (receipt_width - qr_size) / 2
+
+        for idx, table in enumerate(tables):
+            invite = TableInvite.objects.create(
+                table=table,
+                created_by=request.user
+            )
+
+            qr_img = generate_qr_image(table.number, str(invite.token))
+
+            if table_on_top:
+                # TABLE NUMBER — top
+                c.setFillColorRGB(0, 0, 0)
+                c.setFont("Helvetica-Bold", 11)
+                c.drawCentredString(receipt_width / 2, receipt_height - 9 * mm, f"TABLE {table.number}")
+
+                # QR — middle
+                qr_y = receipt_height - 11 * mm - qr_size
+                c.drawImage(ImageReader(qr_img), qr_x, qr_y, qr_size, qr_size)
+
+                # scan text
+                c.setFont("Helvetica", 6)
+                c.setFillColorRGB(0.35, 0.35, 0.35)
+                c.drawCentredString(receipt_width / 2, qr_y - 5 * mm, "Scan for interactive menu")
+
+                # date — bottom
+                c.setFont("Helvetica", 5)
+                c.setFillColorRGB(0.65, 0.65, 0.65)
+                c.drawCentredString(receipt_width / 2, qr_y - 9 * mm, date_str)
+
+            else:
+                # date — top
+                c.setFont("Helvetica", 5)
+                c.setFillColorRGB(0.65, 0.65, 0.65)
+                c.drawCentredString(receipt_width / 2, receipt_height - 6 * mm, date_str)
+
+                # scan text
+                c.setFont("Helvetica", 6)
+                c.setFillColorRGB(0.35, 0.35, 0.35)
+                c.drawCentredString(receipt_width / 2, receipt_height - 10 * mm, "Scan for interactive menu")
+
+                # QR — middle
+                qr_y = receipt_height - 13 * mm - qr_size
+                c.drawImage(ImageReader(qr_img), qr_x, qr_y, qr_size, qr_size)
+
+                # TABLE NUMBER — bottom
+                c.setFillColorRGB(0, 0, 0)
+                c.setFont("Helvetica-Bold", 11)
+                c.drawCentredString(receipt_width / 2, qr_y - 8 * mm, f"TABLE {table.number}")
+
+            # new page for each table
+            if idx < len(tables) - 1:
+                c.showPage()
+                c.setPageSize((receipt_width, receipt_height))
+
+        c.save()
+        buffer.seek(0)
+
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="all_tables_qr.pdf"'
         return response
 
 
