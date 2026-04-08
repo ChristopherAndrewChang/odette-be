@@ -258,9 +258,11 @@ class GenerateQRView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        # kill old invites and sessions
         TableInvite.objects.filter(table=table, is_active=True).update(is_active=False)
-        invite = TableInvite.objects.create(table=table, created_by=request.user)
+        CustomerSession.objects.filter(table=table, is_active=True).update(is_active=False)
 
+        invite = TableInvite.objects.create(table=table, created_by=request.user)
         img_buffer = generate_qr_receipt_image(table.number, str(invite.token))
 
         response = HttpResponse(img_buffer, content_type='image/png')
@@ -281,7 +283,9 @@ class BulkGenerateQRView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        # kill all old invites and sessions
         TableInvite.objects.filter(is_active=True).update(is_active=False)
+        CustomerSession.objects.filter(is_active=True).update(is_active=False)
 
         zip_buffer = io.BytesIO()
 
@@ -361,6 +365,7 @@ class ScanQRView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # allow multiple sessions per invite — one per customer name
         session = CustomerSession.objects.create(
             invite=invite,
             table=invite.table,
