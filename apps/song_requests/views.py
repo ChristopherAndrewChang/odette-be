@@ -8,6 +8,7 @@ from apps.tables.models import CustomerSession
 from apps.core.pagination import StandardPagination
 from .models import SongRequest
 from .serializers import SongRequestSerializer, SongRequestCreateSerializer
+from django.db.models import F
 
 SONG_LIMIT = 3
 
@@ -102,8 +103,7 @@ class SongRequestListView(APIView):
         )
         if serializer.is_valid():
             song_request = serializer.save(session=session)
-            session.song_count += 1
-            session.save(update_fields=['song_count'])
+            CustomerSession.objects.filter(pk=session.pk).update(song_count=F('song_count') + 1)
             return Response(
                 SongRequestSerializer(song_request).data,
                 status=status.HTTP_201_CREATED
