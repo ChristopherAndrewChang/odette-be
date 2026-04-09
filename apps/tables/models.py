@@ -42,6 +42,8 @@ class CustomerSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     is_active = models.BooleanField(default=True)
+    song_count = models.PositiveIntegerField(default=0)
+    screen_count = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"{self.customer_name} @ Table {self.table.number}"

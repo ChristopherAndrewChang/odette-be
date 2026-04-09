@@ -9,6 +9,8 @@ from apps.core.pagination import StandardPagination
 from .models import SongRequest
 from .serializers import SongRequestSerializer, SongRequestCreateSerializer
 
+SONG_LIMIT = 3
+
 
 class SongRequestListView(APIView):
     """Staff sees all requests. Customers see only their own."""
@@ -87,12 +89,21 @@ class SongRequestListView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
+        # Quota check
+        if session.song_count >= SONG_LIMIT:
+            return Response(
+                {'error': f'Song request limit of {SONG_LIMIT} reached'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
         serializer = SongRequestCreateSerializer(
             data=request.data,
             context={'session': session}
         )
         if serializer.is_valid():
             song_request = serializer.save(session=session)
+            session.song_count += 1
+            session.save(update_fields=['song_count'])
             return Response(
                 SongRequestSerializer(song_request).data,
                 status=status.HTTP_201_CREATED
