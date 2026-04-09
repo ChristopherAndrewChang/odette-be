@@ -7,7 +7,7 @@ ALLOWED_HOSTS = [
     'odette.vip',
     'www.odette.vip',
     'api.odette.vip',
-    'admin.odette.vip',
+    'app.odette.vip',
     '159.89.192.224',
 ]
 
@@ -26,7 +26,7 @@ CORS_ALLOWED_ORIGINS = [
     'https://odette.vip',
     'https://www.odette.vip',
     'https://api.odette.vip',
-    'https://admin.odette.vip',
+    'https://app.odette.vip',
     'http://localhost:3010',
     'http://localhost:3000',
     'http://127.0.0.1:3010',
@@ -39,7 +39,7 @@ CSRF_TRUSTED_ORIGINS = [
     'https://odette.vip',
     'https://www.odette.vip',
     'https://api.odette.vip',
-    'https://admin.odette.vip',
+    'https://app.odette.vip',
     'http://localhost:3010',
     'http://localhost:3000',
 ]
@@ -63,7 +63,7 @@ CORS_ALLOW_HEADERS = [
     'referer',
 ]
 
-FRONTEND_URL = 'https://odette.vip'
+FRONTEND_URL = 'https://app.odette.vip'
 
 TIME_ZONE = 'Asia/Jakarta'
 USE_TZ = True
