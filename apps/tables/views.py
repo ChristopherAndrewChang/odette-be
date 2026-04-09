@@ -52,7 +52,7 @@ def generate_qr_receipt_pdf(table_number, token):
     date_str = today.strftime("%d %b %Y")
 
     receipt_width = 58 * mm
-    receipt_height = 65 * mm
+    receipt_height = 40 * mm
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=(receipt_width, receipt_height))
@@ -113,7 +113,7 @@ def generate_qr_bulk_pdf(tables_data):
     date_str = today.strftime("%d %b %Y")
 
     receipt_width = 58 * mm
-    receipt_height = 65 * mm
+    receipt_height = 40 * mm
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=(receipt_width, receipt_height))
