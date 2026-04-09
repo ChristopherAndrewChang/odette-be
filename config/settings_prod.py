@@ -4,10 +4,11 @@ import os
 DEBUG = False
 
 ALLOWED_HOSTS = [
-    'changky.com',
-    'www.changky.com',
-    'api.changky.com',
-    '134.209.98.222',
+    'odette.vip',
+    'www.odette.vip',
+    'api.odette.vip',
+    'admin.odette.vip',
+    '159.89.192.224',
 ]
 
 DATABASES = {
@@ -22,25 +23,25 @@ DATABASES = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    'https://changky.com',
-    'https://www.changky.com',
-    'https://api.changky.com',
-    'https://app.changky.com',
+    'https://odette.vip',
+    'https://www.odette.vip',
+    'https://api.odette.vip',
+    'https://admin.odette.vip',
     'http://localhost:3010',
     'http://localhost:3000',
     'http://127.0.0.1:3010',
     'http://127.0.0.1:3000',
 ]
 
+CORS_ALLOW_ALL_ORIGINS = False
+
 CSRF_TRUSTED_ORIGINS = [
-    'https://changky.com',
-    'https://www.changky.com',
-    'https://api.changky.com',
-    'https://app.changky.com',
+    'https://odette.vip',
+    'https://www.odette.vip',
+    'https://api.odette.vip',
+    'https://admin.odette.vip',
     'http://localhost:3010',
     'http://localhost:3000',
-    'http://127.0.0.1:3010',
-    'http://127.0.0.1:3000',
 ]
 
 CORS_ALLOW_HEADERS = [
@@ -62,7 +63,10 @@ CORS_ALLOW_HEADERS = [
     'referer',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = False
+FRONTEND_URL = 'https://odette.vip'
+
+TIME_ZONE = 'Asia/Jakarta'
+USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = '/home/odette/odette-be/staticfiles'
@@ -70,5 +74,5 @@ STATIC_ROOT = '/home/odette/odette-be/staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = '/home/odette/odette-be/media'
 
-TIME_ZONE = 'Asia/Jakarta'
-USE_TZ = True
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800
