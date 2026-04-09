@@ -9,6 +9,7 @@ from apps.core.pagination import StandardPagination
 from .models import ScreenRequest
 from .serializers import ScreenRequestSerializer, ScreenRequestCreateSerializer
 
+SCREEN_LIMIT = 3
 
 class ScreenRequestListView(APIView):
     """Staff sees all requests. Customers see only their own."""
@@ -83,6 +84,12 @@ class ScreenRequestListView(APIView):
                 {'error': 'Invalid or expired session'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+        
+        if session.screen_count >= SCREEN_LIMIT:
+            return Response(
+                {'error': f'Screen takeover limit of {SCREEN_LIMIT} reached'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
 
         serializer = ScreenRequestCreateSerializer(
             data=request.data,
@@ -90,6 +97,8 @@ class ScreenRequestListView(APIView):
         )
         if serializer.is_valid():
             screen_request = serializer.save(session=session)
+            session.screen_count += 1
+            session.save(update_field=['screen_count'])
             return Response(
                 ScreenRequestSerializer(screen_request).data,
                 status=status.HTTP_201_CREATED
