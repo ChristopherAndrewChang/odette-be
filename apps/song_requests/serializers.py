@@ -42,6 +42,6 @@ class SongRequestCreateSerializer(serializers.ModelSerializer):
         ).count()
         if count >= 3:
             raise serializers.ValidationError(
-                'Maximum 5 song requests per session'
+                'Maximum 3 song requests per session'
             )
         return data

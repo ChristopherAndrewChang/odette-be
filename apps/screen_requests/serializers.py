@@ -67,9 +67,9 @@ class ScreenRequestCreateSerializer(serializers.ModelSerializer):
                 ScreenRequest.STATUS_APPROVED,
             ]
         ).count()
-        if count >= 5:
+        if count >= 3:
             raise serializers.ValidationError(
-                'Maximum 5 screen requests per session'
+                'Maximum 3 screen requests per session'
             )
 
         return data
