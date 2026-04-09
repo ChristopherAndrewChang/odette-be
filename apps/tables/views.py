@@ -57,7 +57,7 @@ def generate_qr_receipt_pdf(table_number, token):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=(receipt_width, receipt_height))
 
-    qr_size = 38 * mm
+    qr_size = 20 * mm
     qr_x = (receipt_width - qr_size) / 2
     qr_img = generate_qr_image(token, table_number)
 
@@ -118,7 +118,7 @@ def generate_qr_bulk_pdf(tables_data):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=(receipt_width, receipt_height))
 
-    qr_size = 38 * mm
+    qr_size = 20 * mm
     qr_x = (receipt_width - qr_size) / 2
 
     for idx, (table_number, token) in enumerate(tables_data):
