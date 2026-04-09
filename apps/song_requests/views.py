@@ -103,7 +103,8 @@ class SongRequestListView(APIView):
         )
         if serializer.is_valid():
             song_request = serializer.save(session=session)
-            CustomerSession.objects.filter(pk=session.pk).update(song_count=F('song_count') + 1)
+            updated = CustomerSession.objects.filter(pk=session.pk).update(song_count=F('song_count') + 1)
+            print(f"DEBUG: session pk={session.pk}, rows updated={updated}")
             return Response(
                 SongRequestSerializer(song_request).data,
                 status=status.HTTP_201_CREATED
