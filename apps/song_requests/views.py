@@ -10,7 +10,7 @@ from .models import SongRequest
 from .serializers import SongRequestSerializer, SongRequestCreateSerializer
 from django.db.models import F
 
-SONG_LIMIT = 3
+# SONG_LIMIT = 3
 
 
 class SongRequestListView(APIView):
@@ -90,12 +90,12 @@ class SongRequestListView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        # Quota check
-        if session.song_count >= SONG_LIMIT:
-            return Response(
-                {'error': f'Song request limit of {SONG_LIMIT} reached'},
-                status=status.HTTP_429_TOO_MANY_REQUESTS
-            )
+        # # Quota check
+        # if session.song_count >= SONG_LIMIT:
+        #     return Response(
+        #         {'error': f'Song request limit of {SONG_LIMIT} reached'},
+        #         status=status.HTTP_429_TOO_MANY_REQUESTS
+        #     )
 
         serializer = SongRequestCreateSerializer(
             data=request.data,
@@ -103,8 +103,8 @@ class SongRequestListView(APIView):
         )
         if serializer.is_valid():
             song_request = serializer.save(session=session)
-            updated = CustomerSession.objects.filter(pk=session.pk).update(song_count=F('song_count') + 1)
-            print(f"DEBUG: session pk={session.pk}, rows updated={updated}")
+            # updated = CustomerSession.objects.filter(pk=session.pk).update(song_count=F('song_count') + 1)
+            # print(f"DEBUG: session pk={session.pk}, rows updated={updated}")
             return Response(
                 SongRequestSerializer(song_request).data,
                 status=status.HTTP_201_CREATED

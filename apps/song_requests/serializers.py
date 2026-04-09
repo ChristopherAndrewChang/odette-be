@@ -30,18 +30,18 @@ class SongRequestCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Minimum donation is Rp 10.000')
         return value
 
-    # def validate(self, data):
-    #     session = self.context.get('session')
-    #     count = SongRequest.objects.filter(
-    #         session=session,
-    #         status__in=[
-    #             SongRequest.STATUS_PENDING,
-    #             SongRequest.STATUS_ADMIN_APPROVED,
-    #             SongRequest.STATUS_DJ_APPROVED,
-    #         ]
-    #     ).count()
-    #     if count >= 5:
-    #         raise serializers.ValidationError(
-    #             'Maximum 5 song requests per session'
-    #         )
-    #     return data
+    def validate(self, data):
+        session = self.context.get('session')
+        count = SongRequest.objects.filter(
+            session=session,
+            status__in=[
+                SongRequest.STATUS_PENDING,
+                SongRequest.STATUS_ADMIN_APPROVED,
+                SongRequest.STATUS_DJ_APPROVED,
+            ]
+        ).count()
+        if count >= 3:
+            raise serializers.ValidationError(
+                'Maximum 5 song requests per session'
+            )
+        return data
