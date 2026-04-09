@@ -52,12 +52,12 @@ def generate_qr_receipt_pdf(table_number, token):
     date_str = today.strftime("%d %b %Y")
 
     receipt_width = 58 * mm
-    receipt_height = 70 * mm
+    receipt_height = 65 * mm
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=(receipt_width, receipt_height))
 
-    qr_size = 42 * mm
+    qr_size = 38 * mm
     qr_x = (receipt_width - qr_size) / 2
     qr_img = generate_qr_image(token, table_number)
 
@@ -113,12 +113,12 @@ def generate_qr_bulk_pdf(tables_data):
     date_str = today.strftime("%d %b %Y")
 
     receipt_width = 58 * mm
-    receipt_height = 70 * mm
+    receipt_height = 65 * mm
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=(receipt_width, receipt_height))
 
-    qr_size = 42 * mm
+    qr_size = 38 * mm
     qr_x = (receipt_width - qr_size) / 2
 
     for idx, (table_number, token) in enumerate(tables_data):
