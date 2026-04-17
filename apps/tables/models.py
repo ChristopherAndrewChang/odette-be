@@ -4,7 +4,7 @@ from apps.users.models import User
 
 
 class Table(models.Model):
-    number = models.PositiveIntegerField(unique=True)
+    number = models.CharField(max_length=20, unique=True)
     is_open = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

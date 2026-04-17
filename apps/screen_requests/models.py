@@ -4,10 +4,12 @@ from apps.users.models import User
 
 
 class ScreenRequest(models.Model):
+    TYPE_RUNNING_TEXT = 'running_text'
     TYPE_TEXT = 'text'
     TYPE_PHOTO = 'photo'
     TYPE_VIDEO = 'video'
     TYPE_CHOICES = [
+        (TYPE_RUNNING_TEXT, 'Running Text'),
         (TYPE_TEXT, 'Text'),
         (TYPE_PHOTO, 'Photo'),
         (TYPE_VIDEO, 'Video'),
@@ -27,7 +29,7 @@ class ScreenRequest(models.Model):
         on_delete=models.CASCADE,
         related_name='screen_requests'
     )
-    request_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    request_type = models.CharField(max_length=25, choices=TYPE_CHOICES)
     message = models.TextField(blank=True)
     media_file = models.FileField(upload_to='screen_requests/', blank=True, null=True)
     donation_amount = models.DecimalField(max_digits=10, decimal_places=2)

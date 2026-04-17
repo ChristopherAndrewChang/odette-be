@@ -6,10 +6,12 @@ class User(AbstractUser):
     ROLE_SUPERUSER = 'superuser'
     ROLE_ADMIN = 'admin'
     ROLE_DJ = 'dj'
+    ROLE_CASHIER = 'cashier'
     ROLE_CHOICES = [
         (ROLE_SUPERUSER, 'Superuser'),
         (ROLE_ADMIN, 'Admin'),
         (ROLE_DJ, 'DJ'),
+        (ROLE_CASHIER, 'Cashier'),
     ]
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_ADMIN)

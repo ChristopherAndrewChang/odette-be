@@ -5,7 +5,7 @@ from .models import User
 class CreateAdminSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     role = serializers.ChoiceField(
-        choices=[('admin', 'Admin'), ('dj', 'DJ')],
+        choices=[('admin', 'Admin'), ('dj', 'DJ'), ('cashier', 'Cashier')],
         default='admin'
     )
 

@@ -14,7 +14,7 @@ class AdminAccountListCreateView(APIView):
 
     def get(self, request):
         admins = User.objects.filter(
-            role__in=[User.ROLE_ADMIN, User.ROLE_DJ]
+            role__in=[User.ROLE_ADMIN, User.ROLE_DJ, User.ROLE_CASHIER]
         ).order_by('username')
 
         paginator = StandardPagination()
@@ -36,7 +36,7 @@ class AdminAccountDetailView(APIView):
 
     def get_object(self, pk):
         try:
-            return User.objects.get(pk=pk, role__in=[User.ROLE_ADMIN, User.ROLE_DJ])
+            return User.objects.get(pk=pk, role__in=[User.ROLE_ADMIN, User.ROLE_DJ, User.ROLE_CASHIER])
         except User.DoesNotExist:
             return None
 
