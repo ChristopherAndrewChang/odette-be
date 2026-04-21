@@ -50,6 +50,13 @@ class SongRequest(models.Model):
     )
     admin_reviewed_at = models.DateTimeField(null=True, blank=True)
     dj_reviewed_at = models.DateTimeField(null=True, blank=True)
+    is_billed = models.BooleanField(default=False)
+    billed_by = models.ForeignKey(
+        User, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='billed_songs'
+    )
+    billed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

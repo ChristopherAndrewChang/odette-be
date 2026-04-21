@@ -50,17 +50,25 @@ class SongRequestListView(APIView):
                 if status_filter:
                     requests = requests.filter(status=status_filter)
 
-                date_filter = request.query_params.get('date')
+                date_param = request.query_params.get('date')
                 show_all = request.query_params.get('all')
 
                 if show_all:
                     pass
-                elif date_filter:
-                    requests = requests.filter(created_at__date=date_filter)
+                elif date_param:
+                    try:
+                        session_date = datetime.strptime(date_param, '%Y-%m-%d').date()
+                    except ValueError:
+                        return Response(
+                            {'error': 'Invalid date format. Use YYYY-MM-DD'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                    start, end = get_session_range(session_date)
+                    requests = requests.filter(created_at__range=(start, end))
                 else:
-                    requests = requests.filter(
-                        created_at__date=timezone.now().date()
-                    )
+                    session_date = get_session_date(timezone.now())
+                    start, end = get_session_range(session_date)
+                    requests = requests.filter(created_at__range=(start, end))
 
         else:
             return Response(
@@ -185,5 +193,32 @@ class DJSongReviewView(APIView):
         song_request.reviewed_by_dj = request.user
         song_request.dj_reviewed_at = timezone.now()
         song_request.save()
+
+        return Response(SongRequestSerializer(song_request).data)
+
+
+class CashierBillSongView(APIView):
+    """Cashier marks a DJ-approved song as billed."""
+    permission_classes = [IsStaff]
+
+    def patch(self, request, pk):
+        try:
+            song_request = SongRequest.objects.get(pk=pk)
+        except SongRequest.DoesNotExist:
+            return Response(
+                {'error': 'Request not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if song_request.status != SongRequest.STATUS_DJ_APPROVED:
+            return Response(
+                {'error': 'Only DJ-approved songs can be billed'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        song_request.is_billed = True
+        song_request.billed_by = request.user
+        song_request.billed_at = timezone.now()
+        song_request.save(update_fields=['is_billed', 'billed_by', 'billed_at'])
 
         return Response(SongRequestSerializer(song_request).data)

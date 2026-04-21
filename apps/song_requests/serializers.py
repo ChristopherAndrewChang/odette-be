@@ -12,7 +12,9 @@ class SongRequestSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'song_title', 'artist', 'donation_amount',
             'status', 'status_display', 'customer_name', 'table_number',
-            'admin_reviewed_at', 'dj_reviewed_at', 'created_at',
+            'admin_reviewed_at', 'dj_reviewed_at',
+            'is_billed', 'billed_at',
+            'created_at',
         ]
         read_only_fields = ['status', 'admin_reviewed_at', 'dj_reviewed_at', 'created_at']
 
