@@ -50,3 +50,14 @@ class DonationSetting(models.Model):
 
     def __str__(self):
         return f"{self.day_type} | {self.request_type} → Rp {self.min_amount:,}"
+
+
+class BannedWord(models.Model):
+    word = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.word
+
+    class Meta:
+        ordering = ['word']
