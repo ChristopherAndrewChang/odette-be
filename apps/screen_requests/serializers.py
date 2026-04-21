@@ -1,9 +1,12 @@
 from rest_framework import serializers
+from apps.core.utils import check_banned_words
 from .models import ScreenRequest
 
-# 10MB for photos, 50MB for videos
 MAX_PHOTO_SIZE = 10 * 1024 * 1024
 MAX_VIDEO_SIZE = 50 * 1024 * 1024
+
+TEXT_TYPES = (ScreenRequest.TYPE_RUNNING_TEXT, ScreenRequest.TYPE_VTRON_TEXT)
+MEDIA_TYPES = (ScreenRequest.TYPE_VTRON_PHOTO, ScreenRequest.TYPE_VTRON_VIDEO)
 
 
 class ScreenRequestSerializer(serializers.ModelSerializer):
@@ -15,9 +18,9 @@ class ScreenRequestSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'request_type', 'message', 'media_file',
             'donation_amount', 'status', 'customer_name',
-            'table_number', 'reviewed_at', 'created_at',
+            'table_number', 'reviewed_at', 'played_at', 'created_at',
         ]
-        read_only_fields = ['status', 'reviewed_at', 'created_at']
+        read_only_fields = ['status', 'reviewed_at', 'played_at', 'created_at']
 
 
 class ScreenRequestCreateSerializer(serializers.ModelSerializer):
@@ -35,36 +38,45 @@ class ScreenRequestCreateSerializer(serializers.ModelSerializer):
         message = data.get('message', '')
         media_file = data.get('media_file')
 
-        # text must have message
-        if request_type == ScreenRequest.TYPE_TEXT and not message:
+        # text types must have message
+        if request_type in TEXT_TYPES and not message:
             raise serializers.ValidationError(
                 {'message': 'Message is required for text requests'}
             )
 
         # photo/video must have file
-        if request_type in (ScreenRequest.TYPE_PHOTO, ScreenRequest.TYPE_VIDEO) and not media_file:
+        if request_type in MEDIA_TYPES and not media_file:
             raise serializers.ValidationError(
                 {'media_file': 'File is required for photo/video requests'}
             )
 
         # validate file size
         if media_file:
-            if request_type == ScreenRequest.TYPE_PHOTO and media_file.size > MAX_PHOTO_SIZE:
+            if request_type == ScreenRequest.TYPE_VTRON_PHOTO and media_file.size > MAX_PHOTO_SIZE:
                 raise serializers.ValidationError(
                     {'media_file': 'Photo size cannot exceed 10MB'}
                 )
-            if request_type == ScreenRequest.TYPE_VIDEO and media_file.size > MAX_VIDEO_SIZE:
+            if request_type == ScreenRequest.TYPE_VTRON_VIDEO and media_file.size > MAX_VIDEO_SIZE:
                 raise serializers.ValidationError(
                     {'media_file': 'Video size cannot exceed 50MB'}
                 )
 
-        # check max 5 requests per session
+        # bad word check for text types only
+        if request_type in TEXT_TYPES and message:
+            banned = check_banned_words(message)
+            if banned:
+                raise serializers.ValidationError(
+                    {'message': 'Message contains prohibited content'}
+                )
+
+        # quota check per session
         session = self.context.get('session')
         count = ScreenRequest.objects.filter(
             session=session,
             status__in=[
-                ScreenRequest.STATUS_PENDING,
-                ScreenRequest.STATUS_APPROVED,
+                ScreenRequest.STATUS_PENDING_REVIEW,
+                ScreenRequest.STATUS_PENDING_PAYMENT,
+                ScreenRequest.STATUS_PAID,
             ]
         ).count()
         if count >= 3:

@@ -5,23 +5,27 @@ from apps.users.models import User
 
 class ScreenRequest(models.Model):
     TYPE_RUNNING_TEXT = 'running_text'
-    TYPE_TEXT = 'text'
-    TYPE_PHOTO = 'photo'
-    TYPE_VIDEO = 'video'
+    TYPE_VTRON_TEXT = 'vtron_text'
+    TYPE_VTRON_PHOTO = 'vtron_photo'
+    TYPE_VTRON_VIDEO = 'vtron_video'
     TYPE_CHOICES = [
         (TYPE_RUNNING_TEXT, 'Running Text'),
-        (TYPE_TEXT, 'Text'),
-        (TYPE_PHOTO, 'Photo'),
-        (TYPE_VIDEO, 'Video'),
+        (TYPE_VTRON_TEXT, 'Vtron Text'),
+        (TYPE_VTRON_PHOTO, 'Vtron Photo'),
+        (TYPE_VTRON_VIDEO, 'Vtron Video'),
     ]
 
-    STATUS_PENDING = 'pending'
-    STATUS_APPROVED = 'approved'
-    STATUS_REJECTED = 'rejected'
+    STATUS_PENDING_REVIEW  = 'pending_review'
+    STATUS_PENDING_PAYMENT = 'pending_payment'
+    STATUS_PAID            = 'paid'
+    STATUS_PLAYED          = 'played'
+    STATUS_REJECTED        = 'rejected'
     STATUS_CHOICES = [
-        (STATUS_PENDING, 'Pending'),
-        (STATUS_APPROVED, 'Approved'),
-        (STATUS_REJECTED, 'Rejected'),
+        (STATUS_PENDING_REVIEW,  'Pending Review'),
+        (STATUS_PENDING_PAYMENT, 'Pending Payment'),
+        (STATUS_PAID,            'Paid'),
+        (STATUS_PLAYED,          'Played'),
+        (STATUS_REJECTED,        'Rejected'),
     ]
 
     session = models.ForeignKey(
@@ -33,13 +37,19 @@ class ScreenRequest(models.Model):
     message = models.TextField(blank=True)
     media_file = models.FileField(upload_to='screen_requests/', blank=True, null=True)
     donation_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING_REVIEW)
     reviewed_by = models.ForeignKey(
         User, null=True, blank=True,
         on_delete=models.SET_NULL,
         related_name='reviewed_screen_requests'
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
+    played_by = models.ForeignKey(
+        User, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='played_screen_requests'
+    )
+    played_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

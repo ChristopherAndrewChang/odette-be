@@ -9,6 +9,9 @@ from apps.core.pagination import StandardPagination
 from .models import ScreenRequest
 from .serializers import ScreenRequestSerializer, ScreenRequestCreateSerializer
 
+from datetime import datetime
+from apps.core.utils import get_session_date, get_session_range
+
 
 class ScreenRequestListView(APIView):
     """Staff sees all requests. Customers see only their own."""
@@ -41,17 +44,29 @@ class ScreenRequestListView(APIView):
             if status_filter:
                 requests = requests.filter(status=status_filter)
 
-            date_filter = request.query_params.get('date')
+            request_type_filter = request.query_params.get('request_type')
+            if request_type_filter:
+                requests = requests.filter(request_type=request_type_filter)
+
+            date_param = request.query_params.get('date')
             show_all = request.query_params.get('all')
 
             if show_all:
                 pass
-            elif date_filter:
-                requests = requests.filter(created_at__date=date_filter)
+            elif date_param:
+                try:
+                    session_date = datetime.strptime(date_param, '%Y-%m-%d').date()
+                except ValueError:
+                    return Response(
+                        {'error': 'Invalid date format. Use YYYY-MM-DD'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                start, end = get_session_range(session_date)
+                requests = requests.filter(created_at__range=(start, end))
             else:
-                requests = requests.filter(
-                    created_at__date=timezone.now().date()
-                )
+                session_date = get_session_date(timezone.now())
+                start, end = get_session_range(session_date)
+                requests = requests.filter(created_at__range=(start, end))
 
         else:
             return Response(
@@ -89,7 +104,15 @@ class ScreenRequestListView(APIView):
             context={'session': session}
         )
         if serializer.is_valid():
-            screen_request = serializer.save(session=session)
+            request_type = serializer.validated_data.get('request_type')
+
+            # text types skip review, go straight to pending_payment
+            if request_type in (ScreenRequest.TYPE_RUNNING_TEXT, ScreenRequest.TYPE_VTRON_TEXT):
+                initial_status = ScreenRequest.STATUS_PENDING_PAYMENT
+            else:
+                initial_status = ScreenRequest.STATUS_PENDING_REVIEW
+
+            screen_request = serializer.save(session=session, status=initial_status)
             return Response(
                 ScreenRequestSerializer(screen_request).data,
                 status=status.HTTP_201_CREATED
@@ -98,7 +121,7 @@ class ScreenRequestListView(APIView):
 
 
 class ScreenRequestReviewView(APIView):
-    """Staff approves or rejects a request."""
+    """Admin approves or rejects a photo/video request."""
     permission_classes = [IsStaff]
 
     def patch(self, request, pk):
@@ -110,16 +133,58 @@ class ScreenRequestReviewView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        new_status = request.data.get('status')
-        if new_status not in (ScreenRequest.STATUS_APPROVED, ScreenRequest.STATUS_REJECTED):
+        if screen_request.status != ScreenRequest.STATUS_PENDING_REVIEW:
             return Response(
-                {'error': 'Status must be approved or rejected'},
+                {'error': 'Only pending_review requests can be reviewed'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if screen_request.request_type not in (
+            ScreenRequest.TYPE_VTRON_PHOTO,
+            ScreenRequest.TYPE_VTRON_VIDEO
+        ):
+            return Response(
+                {'error': 'Only photo and video requests require review'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        new_status = request.data.get('status')
+        if new_status not in (ScreenRequest.STATUS_PENDING_PAYMENT, ScreenRequest.STATUS_REJECTED):
+            return Response(
+                {'error': 'Status must be pending_payment or rejected'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         screen_request.status = new_status
         screen_request.reviewed_by = request.user
         screen_request.reviewed_at = timezone.now()
+        screen_request.save()
+
+        return Response(ScreenRequestSerializer(screen_request).data)
+
+
+class ScreenRequestMarkPlayedView(APIView):
+    """Admin marks a paid request as played."""
+    permission_classes = [IsStaff]
+
+    def patch(self, request, pk):
+        try:
+            screen_request = ScreenRequest.objects.get(pk=pk)
+        except ScreenRequest.DoesNotExist:
+            return Response(
+                {'error': 'Request not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if screen_request.status != ScreenRequest.STATUS_PAID:
+            return Response(
+                {'error': 'Only paid requests can be marked as played'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        screen_request.status = ScreenRequest.STATUS_PLAYED
+        screen_request.played_by = request.user
+        screen_request.played_at = timezone.now()
         screen_request.save()
 
         return Response(ScreenRequestSerializer(screen_request).data)
