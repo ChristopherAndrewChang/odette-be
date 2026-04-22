@@ -4,6 +4,7 @@ from .views import (
     ScreenRequestReviewView,
     ScreenRequestMarkPlayedView,
     ScreenRequestDownloadView,
+    MidtransWebhookView,
 )
 
 urlpatterns = [
@@ -11,4 +12,5 @@ urlpatterns = [
     path('<int:pk>/review/', ScreenRequestReviewView.as_view()),
     path('<int:pk>/played/', ScreenRequestMarkPlayedView.as_view()),
     path('<int:pk>/download/', ScreenRequestDownloadView.as_view()),
+    path('webhook/midtrans/', MidtransWebhookView.as_view()),
 ]

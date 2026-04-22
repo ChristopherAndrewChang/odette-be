@@ -191,3 +191,22 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
 MIDTRANS_SERVER_KEY = os.getenv('MIDTRANS_SERVER_KEY')
 MIDTRANS_CLIENT_KEY = os.getenv('MIDTRANS_CLIENT_KEY')
 MIDTRANS_IS_PRODUCTION = os.getenv('MIDTRANS_IS_PRODUCTION', 'False') == 'True'
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'accept-language',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'ngrok-skip-browser-warning',
+    'sec-ch-ua',
+    'sec-ch-ua-mobile',
+    'sec-ch-ua-platform',
+    'referer',
+    'x-session-token',
+]

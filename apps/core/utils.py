@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from django.utils import timezone
 
 
@@ -19,7 +20,7 @@ def get_session_date(dt):
 
 
 def get_session_range(session_date):
-    tz = timezone.get_current_timezone()
+    tz = ZoneInfo('Asia/Jakarta')
     start = datetime(session_date.year, session_date.month, session_date.day, 20, 0, tzinfo=tz)
     end = start + timedelta(hours=8)
     return start, end

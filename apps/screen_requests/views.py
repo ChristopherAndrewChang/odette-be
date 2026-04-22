@@ -12,6 +12,13 @@ from .serializers import ScreenRequestSerializer, ScreenRequestCreateSerializer
 from datetime import datetime
 from apps.core.utils import get_session_date, get_session_range
 
+import hashlib
+from django.conf import settings
+from django.views import View
+from django.http import HttpResponse
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+
 
 class ScreenRequestListView(APIView):
     """Staff sees all requests. Customers see only their own."""
@@ -106,13 +113,24 @@ class ScreenRequestListView(APIView):
         if serializer.is_valid():
             request_type = serializer.validated_data.get('request_type')
 
-            # text types skip review, go straight to pending_payment
             if request_type in (ScreenRequest.TYPE_RUNNING_TEXT, ScreenRequest.TYPE_VTRON_TEXT):
                 initial_status = ScreenRequest.STATUS_PENDING_PAYMENT
             else:
                 initial_status = ScreenRequest.STATUS_PENDING_REVIEW
 
             screen_request = serializer.save(session=session, status=initial_status)
+
+            # generate payment link immediately for text types
+            if request_type in (ScreenRequest.TYPE_RUNNING_TEXT, ScreenRequest.TYPE_VTRON_TEXT):
+                try:
+                    from apps.core.midtrans import create_payment_link
+                    payment_link = create_payment_link(screen_request)
+                    screen_request.payment_link = payment_link
+                    screen_request.save(update_fields=['payment_link'])
+                except Exception as e:
+                    # don't fail the request if midtrans fails
+                    pass
+
             return Response(
                 ScreenRequestSerializer(screen_request).data,
                 status=status.HTTP_201_CREATED
@@ -158,6 +176,15 @@ class ScreenRequestReviewView(APIView):
         screen_request.status = new_status
         screen_request.reviewed_by = request.user
         screen_request.reviewed_at = timezone.now()
+
+        if new_status == ScreenRequest.STATUS_PENDING_PAYMENT:
+            try:
+                from apps.core.midtrans import create_payment_link
+                payment_link = create_payment_link(screen_request)
+                screen_request.payment_link = payment_link
+            except Exception:
+                pass
+
         screen_request.save()
 
         return Response(ScreenRequestSerializer(screen_request).data)
@@ -215,3 +242,48 @@ class ScreenRequestDownloadView(APIView):
             'customer_name': screen_request.session.customer_name,
             'table_number': screen_request.session.table.number,
         })
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class MidtransWebhookView(View):
+    """Midtrans payment notification webhook."""
+
+    def post(self, request):
+        import json
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return HttpResponse(status=400)
+
+        order_id = data.get('order_id', '')
+        transaction_status = data.get('transaction_status')
+        fraud_status = data.get('fraud_status')
+        signature_key = data.get('signature_key')
+        status_code = data.get('status_code')
+        gross_amount = data.get('gross_amount')
+
+        # verify signature
+        # raw = f"{order_id}{status_code}{gross_amount}{settings.MIDTRANS_SERVER_KEY}"
+        # expected = hashlib.sha512(raw.encode()).hexdigest()
+        # if signature_key != expected:
+        #     return HttpResponse(status=403)
+
+        # extract screen request id from order_id e.g. SCREEN-5-1234567890
+        try:
+            screen_request_id = int(order_id.split('-')[1])
+            screen_request = ScreenRequest.objects.get(pk=screen_request_id)
+        except (IndexError, ValueError, ScreenRequest.DoesNotExist):
+            return HttpResponse(status=404)
+
+        # update status based on payment result
+        if transaction_status == 'settlement' or (
+            transaction_status == 'capture' and fraud_status == 'accept'
+        ):
+            screen_request.status = ScreenRequest.STATUS_PAID
+            screen_request.save(update_fields=['status'])
+
+        elif transaction_status in ('cancel', 'deny', 'expire'):
+            screen_request.status = ScreenRequest.STATUS_PENDING_PAYMENT
+            screen_request.save(update_fields=['status'])
+
+        return HttpResponse(status=200)

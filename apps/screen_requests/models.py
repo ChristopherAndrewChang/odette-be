@@ -50,6 +50,7 @@ class ScreenRequest(models.Model):
         related_name='played_screen_requests'
     )
     played_at = models.DateTimeField(null=True, blank=True)
+    payment_link = models.URLField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -8,7 +8,7 @@ from apps.tables.models import CustomerSession
 from apps.core.pagination import StandardPagination
 from .models import SongRequest
 from .serializers import SongRequestSerializer, SongRequestCreateSerializer
-from django.db.models import F
+from django.db.models import F, Sum
 
 from datetime import datetime
 from apps.core.utils import get_session_date, get_session_range
@@ -48,7 +48,9 @@ class SongRequestListView(APIView):
             else:
                 status_filter = request.query_params.get('status')
                 if status_filter:
-                    requests = requests.filter(status=status_filter)
+                    # requests = requests.filter(status=status_filter)
+                    statuses = [s.strip() for s in status_filter.split(',')]
+                    requests = requests.filter(status__in=statuses)
 
                 date_param = request.query_params.get('date')
                 show_all = request.query_params.get('all')
@@ -222,3 +224,41 @@ class CashierBillSongView(APIView):
         song_request.save(update_fields=['is_billed', 'billed_by', 'billed_at'])
 
         return Response(SongRequestSerializer(song_request).data)
+
+
+class SongRequestSummaryView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        date_param = request.query_params.get('date')
+
+        requests = SongRequest.objects.all()
+
+        if date_param:
+            try:
+                session_date = datetime.strptime(date_param, '%Y-%m-%d').date()
+            except ValueError:
+                return Response(
+                    {'error': 'Invalid date format. Use YYYY-MM-DD'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            start, end = get_session_range(session_date)
+            requests = requests.filter(created_at__range=(start, end))
+        else:
+            session_date = get_session_date(timezone.now())
+            start, end = get_session_range(session_date)
+            requests = requests.filter(created_at__range=(start, end))
+
+        pending = requests.filter(status=SongRequest.STATUS_PENDING).count()
+        with_dj = requests.filter(status=SongRequest.STATUS_ADMIN_APPROVED).count()
+        dj_approved = requests.filter(status=SongRequest.STATUS_DJ_APPROVED).count()
+        total_donations = requests.filter(
+            status=SongRequest.STATUS_DJ_APPROVED
+        ).aggregate(total=Sum('donation_amount'))['total'] or 0
+
+        return Response({
+            'pending': pending,
+            'with_dj': with_dj,
+            'dj_approved': dj_approved,
+            'total_donations': total_donations,
+        })
