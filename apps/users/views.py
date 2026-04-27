@@ -73,4 +73,6 @@ class MeView(APIView):
             'role': request.user.role,
             'is_superuser_role': request.user.is_superuser_role,
             'is_admin_role': request.user.is_admin_role,
+            'is_dj_role': request.user.is_dj_role,
+            'is_cashier_role': request.user.is_cashier_role,
         })

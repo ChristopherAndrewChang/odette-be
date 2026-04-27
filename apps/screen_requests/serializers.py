@@ -11,7 +11,7 @@ MEDIA_TYPES = (ScreenRequest.TYPE_VTRON_PHOTO, ScreenRequest.TYPE_VTRON_VIDEO)
 
 class ScreenRequestSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='session.customer_name', read_only=True)
-    table_number = serializers.IntegerField(source='session.table.number', read_only=True)
+    table_number = serializers.CharField(source='session.table.number', read_only=True)
 
     class Meta:
         model = ScreenRequest
