@@ -193,6 +193,9 @@ class TableBulkCreateView(APIView):
 
         numbers = serializer.validated_data['numbers']
 
+        # normalize to uppercase for consistency
+        numbers = [n.strip().upper() for n in numbers]
+
         if len(numbers) != len(set(numbers)):
             return Response(
                 {'error': 'Duplicate table numbers in request'},

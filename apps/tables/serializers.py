@@ -13,15 +13,21 @@ class TableSerializer(serializers.ModelSerializer):
         return obj.sessions.filter(is_active=True).count()
 
 
+# class BulkTableSerializer(serializers.Serializer):
+#     numbers = serializers.ListField(
+#         child=serializers.IntegerField(min_value=1),
+#         allow_empty=False
+#     )
+
 class BulkTableSerializer(serializers.Serializer):
     numbers = serializers.ListField(
-        child=serializers.IntegerField(min_value=1),
+        child=serializers.CharField(max_length=20),
         allow_empty=False
     )
 
 
 class CustomerSessionSerializer(serializers.ModelSerializer):
-    table_number = serializers.IntegerField(source='table.number', read_only=True)
+    table_number = serializers.CharField(source='table.number', read_only=True)
 
     class Meta:
         model = CustomerSession
