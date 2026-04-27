@@ -12,6 +12,7 @@ class IsStaff(BasePermission):
             request.user.ROLE_SUPERUSER,
             request.user.ROLE_ADMIN,
             request.user.ROLE_DJ,
+            request.user.ROLE_CASHIER,
         )
 
 # class IsDJ(BasePermission):
