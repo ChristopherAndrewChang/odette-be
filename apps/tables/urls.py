@@ -8,6 +8,8 @@ from .views import (
     OpenNightView,
     CloseNightView,
     ScanQRView,
+    TableExportView,
+    TableImportView,
 )
 
 urlpatterns = [
@@ -19,4 +21,6 @@ urlpatterns = [
     path('scan/', ScanQRView.as_view()),
     path('<int:pk>/', TableDetailView.as_view()),
     path('<int:pk>/generate-qr/', GenerateQRView.as_view()),
+    path('export/', TableExportView.as_view()),
+    path('import/', TableImportView.as_view()),
 ]

@@ -1,4 +1,5 @@
 import qrcode
+import csv
 import io
 import re
 import zipfile
@@ -228,6 +229,89 @@ class TableBulkCreateView(APIView):
             TableSerializer(tables, many=True).data,
             status=status.HTTP_201_CREATED
         )
+
+
+class TableExportView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        tables = sorted(
+            Table.objects.all(),
+            key=lambda t: natural_sort_key(t)
+        )
+
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(['number', 'new_number'])
+        for table in tables:
+            writer.writerow([table.number, ''])
+
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="tables.csv"'
+        return response
+
+
+class TableImportView(APIView):
+    permission_classes = [IsStaff]
+
+    def post(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response(
+                {'error': 'No file provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            decoded = file.read().decode('utf-8')
+            reader = csv.DictReader(io.StringIO(decoded))
+        except Exception:
+            return Response(
+                {'error': 'Invalid CSV file'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        renamed = []
+        created = []
+        skipped = []
+        errors = []
+
+        for row in reader:
+            number = row.get('number', '').strip()
+            new_number = row.get('new_number', '').strip()
+
+            if not number:
+                continue
+
+            if not new_number:
+                skipped.append(number)
+                continue
+
+            # check if new_number already exists
+            if Table.objects.filter(number=new_number).exists():
+                errors.append(f'{new_number} already exists')
+                continue
+
+            # try to find existing table
+            table = Table.objects.filter(number=number).first()
+
+            if table:
+                old = table.number
+                table.number = new_number
+                table.save(update_fields=['number'])
+                renamed.append(f'{old} → {new_number}')
+            else:
+                # table doesn't exist — create it
+                Table.objects.create(number=new_number)
+                created.append(new_number)
+
+        return Response({
+            'renamed': renamed,
+            'created': created,
+            'skipped': skipped,
+            'errors': errors,
+        })
 
 
 class GenerateQRView(APIView):
