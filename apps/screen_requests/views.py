@@ -181,15 +181,15 @@ class ScreenRequestReviewView(APIView):
         screen_request.reviewed_at = timezone.now()
         screen_request.save()
 
-        if new_status == ScreenRequest.STATUS_PENDING_PAYMENT:
-            try:
-                from apps.core.midtrans import create_payment_link
-                payment_link = create_payment_link(screen_request)
-                screen_request.payment_link = payment_link
-            except Exception:
-                pass
+        # if new_status == ScreenRequest.STATUS_PENDING_PAYMENT:
+        #     try:
+        #         from apps.core.midtrans import create_payment_link
+        #         payment_link = create_payment_link(screen_request)
+        #         screen_request.payment_link = payment_link
+        #     except Exception:
+        #         pass
 
-        screen_request.save()
+        # screen_request.save()
 
         return Response(ScreenRequestSerializer(screen_request).data)
 
