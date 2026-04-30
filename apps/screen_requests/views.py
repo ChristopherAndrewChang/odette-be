@@ -172,9 +172,14 @@ class ScreenRequestReviewView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        screen_request.status = new_status
+        # screen_request.status = new_status
+        # screen_request.reviewed_by = request.user
+        # screen_request.reviewed_at = timezone.now()
+
+        screen_request.status = ScreenRequest.STATUS_PAID if new_status == ScreenRequest.STATUS_APPROVED else ScreenRequest.STATUS_REJECTED
         screen_request.reviewed_by = request.user
         screen_request.reviewed_at = timezone.now()
+        screen_request.save()
 
         if new_status == ScreenRequest.STATUS_PENDING_PAYMENT:
             try:

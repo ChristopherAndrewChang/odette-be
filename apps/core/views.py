@@ -33,47 +33,80 @@ class ClubSettingsView(APIView):
 
 
 class DonationSettingPublicView(APIView):
-    """Customer-facing — returns minimums for today's session."""
+    """Customer-facing — returns active minimums per request type."""
     permission_classes = [AllowAny]
 
     def get(self, request):
-        day_type = get_session_day_type()
-        settings = DonationSetting.objects.filter(day_type=day_type)
+        settings = DonationSetting.objects.filter(is_active=True)
         result = {s.request_type: s.min_amount for s in settings}
         return Response(result)
 
 
 class DonationSettingAdminView(APIView):
-    """Admin manages weekday/weekend rates."""
+    """Admin manages donation price settings."""
     permission_classes = [IsStaff]
 
     def get(self, request):
-        settings = DonationSetting.objects.all().order_by('day_type', 'request_type')
+        request_type = request.query_params.get('request_type')
+        settings = DonationSetting.objects.all().order_by('request_type', 'name')
+        if request_type:
+            settings = settings.filter(request_type=request_type)
         serializer = DonationSettingSerializer(settings, many=True)
         return Response(serializer.data)
 
-    def patch(self, request):
-        day_type = request.data.get('day_type')
-        request_type = request.data.get('request_type')
-        min_amount = request.data.get('min_amount')
+    def post(self, request):
+        serializer = DonationSettingSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if not all([day_type, request_type, min_amount]):
-            return Response(
-                {'error': 'day_type, request_type and min_amount are required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
-        setting, _ = DonationSetting.objects.get_or_create(
-            day_type=day_type,
-            request_type=request_type,
-            defaults={'min_amount': min_amount}
-        )
-        setting.min_amount = min_amount
-        setting.updated_by = request.user
-        setting.save()
+class DonationSettingDetailView(APIView):
+    """Admin updates or deletes a price setting."""
+    permission_classes = [IsStaff]
+
+    def patch(self, request, pk):
+        try:
+            setting = DonationSetting.objects.get(pk=pk)
+        except DonationSetting.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = DonationSettingSerializer(setting, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        try:
+            setting = DonationSetting.objects.get(pk=pk)
+        except DonationSetting.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        setting.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DonationSettingActivateView(APIView):
+    """Admin activates a price — deactivates all others of same request_type."""
+    permission_classes = [IsStaff]
+
+    def patch(self, request, pk):
+        try:
+            setting = DonationSetting.objects.get(pk=pk)
+        except DonationSetting.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # deactivate all others of same request_type
+        DonationSetting.objects.filter(
+            request_type=setting.request_type
+        ).update(is_active=False)
+
+        # activate this one
+        setting.is_active = True
+        setting.save(update_fields=['is_active'])
 
         return Response(DonationSettingSerializer(setting).data)
-
 
 class BannedWordListView(APIView):
     permission_classes = [IsStaff]

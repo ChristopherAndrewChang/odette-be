@@ -15,8 +15,8 @@ class ClubSettingsSerializer(serializers.ModelSerializer):
 class DonationSettingSerializer(serializers.ModelSerializer):
     class Meta:
         model = DonationSetting
-        fields = ['id', 'day_type', 'request_type', 'min_amount', 'updated_at']
-        read_only_fields = ['updated_at']
+        fields = ['id', 'request_type', 'name', 'min_amount', 'is_active', 'created_at']
+        read_only_fields = ['created_at']
 
 
 class BannedWordSerializer(serializers.ModelSerializer):

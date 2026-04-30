@@ -22,10 +22,6 @@ class ClubSettings(models.Model):
 
 
 class DonationSetting(models.Model):
-    DAY_WEEKDAY = 'weekday'
-    DAY_WEEKEND = 'weekend'
-    DAY_CHOICES = [(DAY_WEEKDAY, 'Weekday'), (DAY_WEEKEND, 'Weekend')]
-
     REQUEST_SONG = 'song_request'
     REQUEST_RUNNING = 'running_text'
     REQUEST_VTRON_TEXT = 'vtron_text'
@@ -39,17 +35,17 @@ class DonationSetting(models.Model):
         (REQUEST_VTRON_VIDEO, 'Vtron Video'),
     ]
 
-    day_type = models.CharField(max_length=10, choices=DAY_CHOICES)
     request_type = models.CharField(max_length=20, choices=REQUEST_CHOICES)
+    name = models.CharField(max_length=100)
     min_amount = models.PositiveIntegerField()
-    updated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
-    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('day_type', 'request_type')
+        unique_together = ('request_type', 'name')
 
     def __str__(self):
-        return f"{self.day_type} | {self.request_type} → Rp {self.min_amount:,}"
+        return f"{self.request_type} — {self.name} — Rp {self.min_amount:,}"
 
 
 class BannedWord(models.Model):
