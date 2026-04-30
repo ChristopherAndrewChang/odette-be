@@ -181,6 +181,9 @@ class TableListCreateView(APIView):
             Table.objects.prefetch_related('sessions').all(),
             key=natural_sort_key
         )
+        search = request.query_params.get('search')
+        if search:
+            tables = [t for t in tables if search.lower() in t.number.lower()]
         paginator = StandardPagination()
         paginated = paginator.paginate_queryset(tables, request)
         serializer = TableSerializer(paginated, many=True)
