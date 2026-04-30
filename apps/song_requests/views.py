@@ -1,4 +1,5 @@
 from django.utils import timezone
+from datetime import datetime, timedelta
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -44,6 +45,11 @@ class SongRequestListView(APIView):
             ).all()
 
             if request.user.role == 'dj':
+                SongRequest.objects.filter(
+                    status=SongRequest.STATUS_ADMIN_APPROVED,
+                    admin_reviewed_at__lt=timezone.now() - timedelta(minutes=30)
+                ).update(status=SongRequest.STATUS_DJ_REJECTED)
+
                 requests = requests.filter(status=SongRequest.STATUS_ADMIN_APPROVED)
             else:
                 status_filter = request.query_params.get('status')
