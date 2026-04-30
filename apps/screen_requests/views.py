@@ -166,17 +166,13 @@ class ScreenRequestReviewView(APIView):
             )
 
         new_status = request.data.get('status')
-        if new_status not in (ScreenRequest.STATUS_PENDING_PAYMENT, ScreenRequest.STATUS_REJECTED):
+        if new_status not in ('approved', 'rejected'):
             return Response(
-                {'error': 'Status must be pending_payment or rejected'},
+                {'error': 'Status must be approved or rejected'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # screen_request.status = new_status
-        # screen_request.reviewed_by = request.user
-        # screen_request.reviewed_at = timezone.now()
-
-        screen_request.status = ScreenRequest.STATUS_PAID if new_status == ScreenRequest.STATUS_APPROVED else ScreenRequest.STATUS_REJECTED
+        screen_request.status = ScreenRequest.STATUS_PAID if new_status == 'approved' else ScreenRequest.STATUS_REJECTED
         screen_request.reviewed_by = request.user
         screen_request.reviewed_at = timezone.now()
         screen_request.save()
