@@ -121,15 +121,14 @@ class ScreenRequestListView(APIView):
             screen_request = serializer.save(session=session, status=initial_status)
 
             # generate payment link immediately for text types
-            if request_type in (ScreenRequest.TYPE_RUNNING_TEXT, ScreenRequest.TYPE_VTRON_TEXT):
-                try:
-                    from apps.core.midtrans import create_payment_link
-                    payment_link = create_payment_link(screen_request)
-                    screen_request.payment_link = payment_link
-                    screen_request.save(update_fields=['payment_link'])
-                except Exception as e:
-                    # don't fail the request if midtrans fails
-                    pass
+            # if request_type in (ScreenRequest.TYPE_RUNNING_TEXT, ScreenRequest.TYPE_VTRON_TEXT):
+            #     try:
+            #         from apps.core.midtrans import create_payment_link
+            #         payment_link = create_payment_link(screen_request)
+            #         screen_request.payment_link = payment_link
+            #         screen_request.save(update_fields=['payment_link'])
+            #     except Exception as e:
+            #         pass
 
             return Response(
                 ScreenRequestSerializer(screen_request).data,
