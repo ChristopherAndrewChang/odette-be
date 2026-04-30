@@ -114,7 +114,7 @@ class ScreenRequestListView(APIView):
             request_type = serializer.validated_data.get('request_type')
 
             if request_type in (ScreenRequest.TYPE_RUNNING_TEXT, ScreenRequest.TYPE_VTRON_TEXT):
-                initial_status = ScreenRequest.STATUS_PENDING_PAYMENT
+                initial_status = ScreenRequest.STATUS_PAID
             else:
                 initial_status = ScreenRequest.STATUS_PENDING_REVIEW
 
