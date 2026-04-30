@@ -1,5 +1,6 @@
 import qrcode
 import io
+import re
 import zipfile
 from django.utils import timezone
 from django.utils.timezone import localtime
@@ -30,6 +31,12 @@ def get_expiry():
     if now >= expiry:
         expiry += timedelta(days=1)
     return expiry
+
+
+def natural_sort_key(table):
+    # splits 'A12' into ['A', 12] for proper sorting
+    parts = re.split(r'(\d+)', table.number)
+    return [int(p) if p.isdigit() else p.upper() for p in parts]
 
 
 def generate_qr_image(token, table_number):
@@ -169,7 +176,11 @@ class TableListCreateView(APIView):
     permission_classes = [IsStaff]
 
     def get(self, request):
-        tables = Table.objects.prefetch_related('sessions').all()
+        # tables = Table.objects.prefetch_related('sessions').all()
+        tables = sorted(
+            Table.objects.prefetch_related('sessions').all(),
+            key=natural_sort_key
+        )
         paginator = StandardPagination()
         paginated = paginator.paginate_queryset(tables, request)
         serializer = TableSerializer(paginated, many=True)
