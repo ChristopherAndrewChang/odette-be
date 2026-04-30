@@ -243,6 +243,32 @@ class ScreenRequestDownloadView(APIView):
         })
 
 
+class ScreenRequestBillView(APIView):
+    # cashier marks a paid screen request as billed 
+    permission_classes = [IsStaff]
+
+    def patch(self, request, pk):
+        try:
+            screen_request = ScreenRequest.objects.get(pk=pk)
+        except ScreenRequest.DoesNotExist:
+            return Response(
+                {'error': 'Request not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        if screen_request.status != ScreenRequest.STATUS_PAID:
+            return Response(
+                {'error': 'Only paid requests can be marked as billed'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        screen_request.is_billed = True
+        screen_request.billed_at = timezone.now()
+        screen_request.billed_by = request.user
+        screen_request.save(update_fields=['is_billed', 'billed_at', 'billed_by'])
+
+        return Response(ScreenRequestSerializer(screen_request).data)
+
 @method_decorator(csrf_exempt, name='dispatch')
 class MidtransWebhookView(View):
     """Midtrans payment notification webhook."""

@@ -19,7 +19,8 @@ class ScreenRequestSerializer(serializers.ModelSerializer):
             'id', 'request_type', 'message', 'media_file',
             'donation_amount', 'status', 'customer_name',
             'table_number', 'reviewed_at', 'played_at',
-            'payment_link', 'created_at',
+            'is_billed', 'billed_at', 'payment_link', 
+            'created_at',
         ]
         read_only_fields = ['status', 'reviewed_at', 'played_at', 'created_at']
 

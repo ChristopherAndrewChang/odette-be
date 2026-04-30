@@ -51,6 +51,13 @@ class ScreenRequest(models.Model):
     )
     played_at = models.DateTimeField(null=True, blank=True)
     payment_link = models.URLField(null=True, blank=True)
+    is_billed = models.BooleanField(default=False)
+    billed_by = models.ForeignKey(
+        User, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='billed_screen_requests'
+    )
+    billed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
