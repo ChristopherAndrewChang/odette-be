@@ -49,7 +49,8 @@ class ScreenRequestListView(APIView):
 
             status_filter = request.query_params.get('status')
             if status_filter:
-                requests = requests.filter(status=status_filter)
+                statuses = [s.strip() for s in status_filter.split(',')]
+                requests = requests.filter(status__in=statuses)
 
             request_type_filter = request.query_params.get('request_type')
             if request_type_filter:
@@ -58,7 +59,7 @@ class ScreenRequestListView(APIView):
             date_param = request.query_params.get('date')
             show_all = request.query_params.get('all')
 
-            if show_all:
+            if show_all == 'true':
                 pass
             elif date_param:
                 try:
@@ -111,24 +112,7 @@ class ScreenRequestListView(APIView):
             context={'session': session}
         )
         if serializer.is_valid():
-            request_type = serializer.validated_data.get('request_type')
-
-            if request_type in (ScreenRequest.TYPE_RUNNING_TEXT, ScreenRequest.TYPE_VTRON_TEXT):
-                initial_status = ScreenRequest.STATUS_PAID
-            else:
-                initial_status = ScreenRequest.STATUS_PENDING_REVIEW
-
-            screen_request = serializer.save(session=session, status=initial_status)
-
-            # generate payment link immediately for text types
-            # if request_type in (ScreenRequest.TYPE_RUNNING_TEXT, ScreenRequest.TYPE_VTRON_TEXT):
-            #     try:
-            #         from apps.core.midtrans import create_payment_link
-            #         payment_link = create_payment_link(screen_request)
-            #         screen_request.payment_link = payment_link
-            #         screen_request.save(update_fields=['payment_link'])
-            #     except Exception as e:
-            #         pass
+            screen_request = serializer.save(session=session, status=ScreenRequest.STATUS_PENDING_REVIEW)
 
             return Response(
                 ScreenRequestSerializer(screen_request).data,
@@ -156,14 +140,14 @@ class ScreenRequestReviewView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if screen_request.request_type not in (
-            ScreenRequest.TYPE_VTRON_PHOTO,
-            ScreenRequest.TYPE_VTRON_VIDEO
-        ):
-            return Response(
-                {'error': 'Only photo and video requests require review'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # if screen_request.request_type not in (
+        #     ScreenRequest.TYPE_VTRON_PHOTO,
+        #     ScreenRequest.TYPE_VTRON_VIDEO
+        # ):
+        #     return Response(
+        #         {'error': 'Only photo and video requests require review'},
+        #         status=status.HTTP_400_BAD_REQUEST
+        #     )
 
         new_status = request.data.get('status')
         if new_status not in ('approved', 'rejected'):
