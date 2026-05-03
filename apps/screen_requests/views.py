@@ -241,7 +241,7 @@ class ScreenRequestBillView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
         
-        if screen_request.status != ScreenRequest.STATUS_PAID and ScreenRequest.STATUS_PLAYED:
+        if screen_request.status not in (ScreenRequest.STATUS_PAID, ScreenRequest.STATUS_PLAYED):
             return Response(
                 {'error': 'Only paid requests can be marked as billed'},
                 status=status.HTTP_400_BAD_REQUEST
