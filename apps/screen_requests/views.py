@@ -187,7 +187,7 @@ class ScreenRequestMarkPlayedView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        if screen_request.status != ScreenRequest.STATUS_PAID and screen_request.status != ScreenRequest.STATUS_PLAYED:
+        if screen_request.status != ScreenRequest.STATUS_PAID and ScreenRequest.STATUS_PLAYED:
             return Response(
                 {'error': 'Only paid requests can be marked as played'},
                 status=status.HTTP_400_BAD_REQUEST
