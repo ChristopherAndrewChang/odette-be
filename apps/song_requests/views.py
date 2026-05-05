@@ -218,7 +218,7 @@ class CashierBillSongView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        if song_request.status != SongRequest.STATUS_DJ_APPROVED:
+        if song_request.status not in (ScreenRequest.STATUS_ADMIN_APPROVED, ScreenRequest.STATUS_DJ_APPROVED)
             return Response(
                 {'error': 'Only DJ-approved songs can be billed'},
                 status=status.HTTP_400_BAD_REQUEST
