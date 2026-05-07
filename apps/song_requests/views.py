@@ -57,6 +57,16 @@ class SongRequestListView(APIView):
                     # requests = requests.filter(status=status_filter)
                     statuses = [s.strip() for s in status_filter.split(',')]
                     requests = requests.filter(status__in=statuses)
+                
+                search = request.query_params.get('search')
+                if search:
+                    from django.db.models import Q
+                    requests = requests.filter(
+                        Q(session__table__number__icontains=search) |
+                        Q(session__customer_name__icontains=search) |
+                        Q(song_title__icontains=search) |
+                        Q(artist_name__icontains=search)
+                    )
 
                 date_param = request.query_params.get('date')
                 show_all = request.query_params.get('all')

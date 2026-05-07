@@ -1,4 +1,5 @@
 from django.utils import timezone
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -53,6 +54,14 @@ class ScreenRequestListView(APIView):
                 requests = requests.filter(status__in=statuses)
 
             request_type_filter = request.query_params.get('request_type')
+            search = request.query_params.get('search')
+            if search:
+                requests = requests.filter(
+                    Q(session__table__number__icontains=search) |
+                    Q(session__customer_name__icontains=search) |
+                    Q(message__icontains=search) |
+                    Q(media_file__icontains=search)
+                )
             if request_type_filter:
                 requests = requests.filter(request_type=request_type_filter)
 
