@@ -65,7 +65,7 @@ class SongRequestListView(APIView):
                         Q(session__table__number__icontains=search) |
                         Q(session__customer_name__icontains=search) |
                         Q(song_title__icontains=search) |
-                        Q(artist_name__icontains=search)
+                        Q(artist__icontains=search)
                     )
 
                 date_param = request.query_params.get('date')
