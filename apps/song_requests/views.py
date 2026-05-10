@@ -50,7 +50,13 @@ class SongRequestListView(APIView):
                     admin_reviewed_at__lt=timezone.now() - timedelta(minutes=30)
                 ).update(status=SongRequest.STATUS_DJ_REJECTED)
 
-                requests = requests.filter(status=SongRequest.STATUS_ADMIN_APPROVED)
+                status_filter = request.query_params.get('status')
+                if status_filter:
+                    statuses = [s.strip() for s in status_filter.split(',')]
+                    requests = requests.filter(status__in=statuses)
+                else:
+                    requests = requests.filter(status=SongRequest.STATUS_ADMIN_APPROVED)
+                
             else:
                 status_filter = request.query_params.get('status')
                 if status_filter:
