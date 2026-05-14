@@ -39,6 +39,18 @@ class ScreenRequestCreateSerializer(serializers.ModelSerializer):
         request_type = data.get('request_type')
         message = data.get('message', '')
         media_file = data.get('media_file')
+        donation_amount = data.get('donation_amount')
+
+        from apps.core.models import DonationSetting
+        active_setting = DonationSetting.objects.filter(
+            request_type=request_type,
+            is_active=True
+        ).first()
+
+        if active_setting and donation_amount < active_setting.min_amount:
+            raise serializers.ValidationError(
+                {'donation_amount': f'Minimum donation for this request is Rp {active_setting.min_amount:,}'}
+            )
 
         # text types must have message
         if request_type in TEXT_TYPES and not message:
