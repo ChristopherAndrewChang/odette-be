@@ -100,8 +100,8 @@ class SongRequestListView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        if request.user.is_authenticated and request.user.role == 'cashier':
-            requests = requests.order_by('-admin_reviewed_at')
+        # if request.user.is_authenticated and request.user.role == 'cashier':
+        #     requests = requests.order_by('-admin_reviewed_at')
 
         paginator = StandardPagination()
         paginated = paginator.paginate_queryset(requests, request)

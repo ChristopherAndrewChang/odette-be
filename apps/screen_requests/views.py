@@ -92,8 +92,8 @@ class ScreenRequestListView(APIView):
             )
 
 
-        if request.user.is_authenticated and request.user.role == 'cashier':
-            requests = requests.order_by('-reviewed_at')
+        # if request.user.is_authenticated and request.user.role == 'cashier':
+        #     requests = requests.order_by('-reviewed_at')
 
         paginator = StandardPagination()
         paginated = paginator.paginate_queryset(requests, request)
