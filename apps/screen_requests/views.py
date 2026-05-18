@@ -91,6 +91,10 @@ class ScreenRequestListView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
+
+        if request.user.is_authenticated and request.user.role == 'cashier':
+            requests = requests.order_by('reviewed_at')
+
         paginator = StandardPagination()
         paginated = paginator.paginate_queryset(requests, request)
         serializer = ScreenRequestSerializer(paginated, many=True)
