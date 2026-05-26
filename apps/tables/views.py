@@ -54,60 +54,22 @@ def generate_qr_image(token, table_number):
 
 
 def generate_qr_receipt_pdf(table_number, token):
-    """Generate a single receipt PDF sized for 58mm thermal printer."""
-    today = timezone.localtime(timezone.now()).date()
-    table_on_top = today.day % 2 != 0
-    date_str = today.strftime("%d %b %Y")
-
     receipt_width = 58 * mm
-    receipt_height = 60 * mm
-
+    receipt_height = 65 * mm
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=(receipt_width, receipt_height))
-
-    qr_size = 20 * mm
+    qr_size = 28 * mm
     qr_x = (receipt_width - qr_size) / 2
     qr_img = generate_qr_image(token, table_number)
 
-    if table_on_top:
-        # TABLE NUMBER — top
-        c.setFillColorRGB(0, 0, 0)
-        c.setFont("Helvetica-Bold", 11)
-        c.drawCentredString(receipt_width / 2, receipt_height - 9 * mm, f"TABLE {table_number}")
-
-        # QR — middle
-        qr_y = receipt_height - 11 * mm - qr_size
-        c.drawImage(ImageReader(qr_img), qr_x, qr_y, qr_size, qr_size)
-
-        # scan text
-        c.setFont("Helvetica", 6)
-        c.setFillColorRGB(0.35, 0.35, 0.35)
-        c.drawCentredString(receipt_width / 2, qr_y - 5 * mm, "Scan for interactive menu")
-
-        # date — bottom
-        c.setFont("Helvetica", 5)
-        c.setFillColorRGB(0.65, 0.65, 0.65)
-        c.drawCentredString(receipt_width / 2, qr_y - 9 * mm, date_str)
-
-    else:
-        # date — top
-        c.setFont("Helvetica", 5)
-        c.setFillColorRGB(0.65, 0.65, 0.65)
-        c.drawCentredString(receipt_width / 2, receipt_height - 6 * mm, date_str)
-
-        # scan text
-        c.setFont("Helvetica", 6)
-        c.setFillColorRGB(0.35, 0.35, 0.35)
-        c.drawCentredString(receipt_width / 2, receipt_height - 10 * mm, "Scan for interactive menu")
-
-        # QR — middle
-        qr_y = receipt_height - 13 * mm - qr_size
-        c.drawImage(ImageReader(qr_img), qr_x, qr_y, qr_size, qr_size)
-
-        # TABLE NUMBER — bottom
-        c.setFillColorRGB(0, 0, 0)
-        c.setFont("Helvetica-Bold", 11)
-        c.drawCentredString(receipt_width / 2, qr_y - 8 * mm, f"TABLE {table_number}")
+    c.setFillColorRGB(0, 0, 0)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawCentredString(receipt_width / 2, receipt_height - 9 * mm, f"TABLE {table_number}")
+    qr_y = receipt_height - 11 * mm - qr_size
+    c.drawImage(ImageReader(qr_img), qr_x, qr_y, qr_size, qr_size)
+    c.setFont("Helvetica", 6)
+    c.setFillColorRGB(0.35, 0.35, 0.35)
+    c.drawCentredString(receipt_width / 2, qr_y - 5 * mm, "Scan for interactive menu")
 
     c.save()
     buffer.seek(0)
@@ -115,55 +77,23 @@ def generate_qr_receipt_pdf(table_number, token):
 
 
 def generate_qr_bulk_pdf(tables_data):
-    """Generate multi-page PDF, one QR per page for thermal printing."""
-    today = timezone.localtime(timezone.now()).date()
-    table_on_top = today.day % 2 != 0
-    date_str = today.strftime("%d %b %Y")
-
     receipt_width = 58 * mm
-    receipt_height = 60 * mm
-
+    receipt_height = 65 * mm
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=(receipt_width, receipt_height))
-
-    qr_size = 20 * mm
+    qr_size = 28 * mm
     qr_x = (receipt_width - qr_size) / 2
 
     for idx, (table_number, token) in enumerate(tables_data):
         qr_img = generate_qr_image(token, table_number)
-
-        if table_on_top:
-            c.setFillColorRGB(0, 0, 0)
-            c.setFont("Helvetica-Bold", 11)
-            c.drawCentredString(receipt_width / 2, receipt_height - 9 * mm, f"TABLE {table_number}")
-
-            qr_y = receipt_height - 11 * mm - qr_size
-            c.drawImage(ImageReader(qr_img), qr_x, qr_y, qr_size, qr_size)
-
-            c.setFont("Helvetica", 6)
-            c.setFillColorRGB(0.35, 0.35, 0.35)
-            c.drawCentredString(receipt_width / 2, qr_y - 5 * mm, "Scan for interactive menu")
-
-            c.setFont("Helvetica", 5)
-            c.setFillColorRGB(0.65, 0.65, 0.65)
-            c.drawCentredString(receipt_width / 2, qr_y - 9 * mm, date_str)
-
-        else:
-            c.setFont("Helvetica", 5)
-            c.setFillColorRGB(0.65, 0.65, 0.65)
-            c.drawCentredString(receipt_width / 2, receipt_height - 6 * mm, date_str)
-
-            c.setFont("Helvetica", 6)
-            c.setFillColorRGB(0.35, 0.35, 0.35)
-            c.drawCentredString(receipt_width / 2, receipt_height - 10 * mm, "Scan for interactive menu")
-
-            qr_y = receipt_height - 13 * mm - qr_size
-            c.drawImage(ImageReader(qr_img), qr_x, qr_y, qr_size, qr_size)
-
-            c.setFillColorRGB(0, 0, 0)
-            c.setFont("Helvetica-Bold", 11)
-            c.drawCentredString(receipt_width / 2, qr_y - 8 * mm, f"TABLE {table_number}")
-
+        c.setFillColorRGB(0, 0, 0)
+        c.setFont("Helvetica-Bold", 11)
+        c.drawCentredString(receipt_width / 2, receipt_height - 9 * mm, f"TABLE {table_number}")
+        qr_y = receipt_height - 11 * mm - qr_size
+        c.drawImage(ImageReader(qr_img), qr_x, qr_y, qr_size, qr_size)
+        c.setFont("Helvetica", 6)
+        c.setFillColorRGB(0.35, 0.35, 0.35)
+        c.drawCentredString(receipt_width / 2, qr_y - 5 * mm, "Scan for interactive menu")
         if idx < len(tables_data) - 1:
             c.showPage()
             c.setPageSize((receipt_width, receipt_height))
@@ -315,7 +245,7 @@ class TableImportView(APIView):
 
 
 class GenerateQRView(APIView):
-    """Generate QR for a single table — returns PDF."""
+    """Reuse existing permanent QR for a table. Use ?force=true to regenerate."""
     permission_classes = [IsStaff]
 
     def post(self, request, pk):
@@ -326,11 +256,15 @@ class GenerateQRView(APIView):
                 {'error': 'Table not found or inactive'},
                 status=status.HTTP_404_NOT_FOUND
             )
+        
+        force = request.query_params.get('force') == 'true'
+        invite = TableInvite.objects.filter(table=table, is_active=True).first()
 
-        TableInvite.objects.filter(table=table, is_active=True).update(is_active=False)
-        CustomerSession.objects.filter(table=table, is_active=True).update(is_active=False)
+        if force or not invite:
+            TableInvite.objects.filter(table=table, is_active=True).update(is_active=False)
+            CustomerSession.objects.filter(table=table, is_active=True).update(is_active=False)
+            invite = TableInvite.objects.create(table=table, created_by=request.user)
 
-        invite = TableInvite.objects.create(table=table, created_by=request.user)
         pdf_buffer = generate_qr_receipt_pdf(table.number, str(invite.token))
 
         response = HttpResponse(pdf_buffer, content_type='application/pdf')
@@ -339,7 +273,7 @@ class GenerateQRView(APIView):
 
 
 class BulkGenerateQRView(APIView):
-    """Generate QR for all tables — returns multi-page PDF, one QR per page."""
+    """Reuse existing permanent QRs for all tables. Use ?force=true to regenerate all."""
     permission_classes = [IsStaff]
 
     def post(self, request):
@@ -350,16 +284,16 @@ class BulkGenerateQRView(APIView):
                 {'error': 'No active tables found'},
                 status=status.HTTP_404_NOT_FOUND
             )
-
-        TableInvite.objects.filter(is_active=True).update(is_active=False)
-        CustomerSession.objects.filter(is_active=True).update(is_active=False)
+        
+        force = request.query_params.get('force') == 'true'
 
         tables_data = []
         for table in tables:
-            invite = TableInvite.objects.create(
-                table=table,
-                created_by=request.user
-            )
+            invite = TableInvite.objects.filter(table=table, is_active=True).first()
+            if force or not invite:
+                TableInvite.objects.filter(table=table, is_active=True).update(is_active=False)
+                CustomerSession.objects.filter(table=table, is_active=True).update(is_active=False)
+                invite = TableInvite.objects.create(table=table, created_by=request.user)
             tables_data.append((table.number, str(invite.token)))
 
         pdf_buffer = generate_qr_bulk_pdf(tables_data)
@@ -383,8 +317,8 @@ class CloseNightView(APIView):
     def post(self, request):
         Table.objects.filter(is_active=True).update(is_open=False)
         CustomerSession.objects.filter(is_active=True).update(is_active=False)
-        TableInvite.objects.filter(is_active=True).update(is_active=False)
-        return Response({'message': 'All tables closed, all sessions and invites ended'})
+        # TableInvite.objects.filter(is_active=True).update(is_active=False)
+        return Response({'message': 'All tables closed, all sessions ended'})
 
 
 class ScanQRView(APIView):
