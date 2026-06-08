@@ -7,6 +7,7 @@ from .views import (
     DonationSettingActivateView,
     BannedWordListView,
     BannedWordDetailView,
+    ReportSummaryView,
 )
 
 urlpatterns = [
@@ -17,4 +18,5 @@ urlpatterns = [
     path('settings/donation/admin/<int:pk>/activate/', DonationSettingActivateView.as_view()),
     path('banned-words/', BannedWordListView.as_view()),
     path('banned-words/<int:pk>/', BannedWordDetailView.as_view()),
+    path('report/summary/', ReportSummaryView.as_view()),
 ]
