@@ -21,84 +21,138 @@ class ReportSummaryView(APIView):
     permission_classes = [IsStaff]
 
     def get(self, request):
-        period = request.query_params.get('period', '7d')
-        period_map = {'1d': 1, '7d': 7, '14d': 14, '30d': 30}
-        nights_count = period_map.get(period, 7)
+        from collections import defaultdict, Counter
+        from zoneinfo import ZoneInfo
 
-        today_session = get_session_date(timezone.now())
+        TZ = ZoneInfo('Asia/Jakarta')
 
-        # Build list of session dates oldest → newest
-        session_dates = [
-            today_session - timedelta(days=i)
-            for i in range(nights_count - 1, -1, -1)
-        ]
+        def session_date_of(dt):
+            local = dt.astimezone(TZ)
+            if local.hour < 12:
+                return (local - timedelta(days=1)).date()
+            return local.date()
 
-        # Per-night breakdown
-        nightly = []
-        for session_date in session_dates:
-            start, end = get_session_range(session_date)
+        period_map = {'7d': 7, '14d': 14, '30d': 30, '180d': 180, '365d': 365}
+        date_param = request.query_params.get('date')
+        period_param = request.query_params.get('period', '7d')
 
-            songs = SongRequest.objects.filter(created_at__range=(start, end))
-            screens = ScreenRequest.objects.filter(created_at__range=(start, end))
+        if date_param:
+            try:
+                from datetime import datetime as dt_
+                session_date = dt_.strptime(date_param, '%Y-%m-%d').date()
+            except ValueError:
+                return Response(
+                    {'error': 'Invalid date format. Use YYYY-MM-DD'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            session_dates = [session_date]
+            nights_count = 1
+            period_label = 'date'
+        else:
+            if period_param not in period_map:
+                return Response({'error': 'Invalid period'}, status=status.HTTP_400_BAD_REQUEST)
+            nights_count = period_map[period_param]
+            today_session = get_session_date(timezone.now())
+            session_dates = [
+                today_session - timedelta(days=i)
+                for i in range(nights_count - 1, -1, -1)
+            ]
+            period_label = period_param
 
-            song_rev = songs.filter(
-                status=SongRequest.STATUS_DJ_APPROVED
-            ).aggregate(t=Sum('donation_amount'))['t'] or 0
+        if nights_count <= 30:
+            group_by = 'daily'
+        elif nights_count <= 180:
+            group_by = 'weekly'
+        else:
+            group_by = 'monthly'
 
-            screen_rev = screens.filter(
-                status__in=[ScreenRequest.STATUS_PAID, ScreenRequest.STATUS_PLAYED]
-            ).aggregate(t=Sum('donation_amount'))['t'] or 0
-
-            nightly.append({
-                'date': str(session_date),
-                'song_count': songs.count(),
-                'screen_count': screens.count(),
-                'song_approved': songs.filter(status=SongRequest.STATUS_DJ_APPROVED).count(),
-                'screen_paid': screens.filter(status__in=[
-                    ScreenRequest.STATUS_PAID, ScreenRequest.STATUS_PLAYED
-                ]).count(),
-                'song_revenue': float(song_rev),
-                'screen_revenue': float(screen_rev),
-                'total': float(song_rev + screen_rev),
-            })
-
-        # Totals
-        total_song_rev = sum(n['song_revenue'] for n in nightly)
-        total_screen_rev = sum(n['screen_revenue'] for n in nightly)
-        total_rev = total_song_rev + total_screen_rev
-        avg_per_night = round(total_rev / nights_count) if nights_count else 0
-
-        # Overall date range
         start_overall, _ = get_session_range(session_dates[0])
         _, end_overall = get_session_range(session_dates[-1])
 
-        all_songs = SongRequest.objects.filter(
-            created_at__range=(start_overall, end_overall)
+        all_songs_qs = list(
+            SongRequest.objects
+            .filter(created_at__range=(start_overall, end_overall))
+            .values('created_at', 'donation_amount', 'status', 'song_title', 'artist')
         )
-        all_screens = ScreenRequest.objects.filter(
-            created_at__range=(start_overall, end_overall)
+        all_screens_qs = list(
+            ScreenRequest.objects
+            .filter(created_at__range=(start_overall, end_overall))
+            .values('created_at', 'donation_amount', 'status', 'request_type')
         )
 
-        # Song status breakdown
+        songs_by_date = defaultdict(list)
+        for s in all_songs_qs:
+            songs_by_date[session_date_of(s['created_at'])].append(s)
+
+        screens_by_date = defaultdict(list)
+        for s in all_screens_qs:
+            screens_by_date[session_date_of(s['created_at'])].append(s)
+
+        def song_rev_from(songs):
+            return sum(
+                float(s['donation_amount']) for s in songs
+                if s['status'] == SongRequest.STATUS_DJ_APPROVED
+            )
+
+        def screen_rev_from(screens):
+            return sum(
+                float(s['donation_amount']) for s in screens
+                if s['status'] in (ScreenRequest.STATUS_PAID, ScreenRequest.STATUS_PLAYED)
+            )
+
+        def build_bucket(key, songs, screens):
+            sr = song_rev_from(songs)
+            scr = screen_rev_from(screens)
+            return {
+                'label': key,
+                'song_revenue': sr,
+                'screen_revenue': scr,
+                'total': sr + scr,
+                'song_count': len(songs),
+                'screen_count': len(screens),
+                'song_approved': sum(1 for s in songs if s['status'] == SongRequest.STATUS_DJ_APPROVED),
+                'screen_paid': sum(1 for s in screens if s['status'] in (ScreenRequest.STATUS_PAID, ScreenRequest.STATUS_PLAYED)),
+            }
+
+        if group_by == 'daily':
+            nightly = [
+                build_bucket(str(sd), songs_by_date.get(sd, []), screens_by_date.get(sd, []))
+                for sd in session_dates
+            ]
+        else:
+            bucket_songs = defaultdict(list)
+            bucket_screens = defaultdict(list)
+            for sd in session_dates:
+                key = f"{sd.isocalendar()[0]}-W{sd.isocalendar()[1]:02d}" if group_by == 'weekly' else sd.strftime('%Y-%m')
+                bucket_songs[key].extend(songs_by_date.get(sd, []))
+                bucket_screens[key].extend(screens_by_date.get(sd, []))
+            nightly = [
+                build_bucket(k, bucket_songs[k], bucket_screens[k])
+                for k in sorted(bucket_songs.keys() | bucket_screens.keys())
+            ]
+
+        total_song_rev = song_rev_from(all_songs_qs)
+        total_screen_rev = screen_rev_from(all_screens_qs)
+        total_rev = total_song_rev + total_screen_rev
+        avg_per_night = round(total_rev / nights_count) if nights_count else 0
+
         song_requests = {
-            'total': all_songs.count(),
-            'dj_approved': all_songs.filter(status=SongRequest.STATUS_DJ_APPROVED).count(),
-            'dj_rejected': all_songs.filter(status=SongRequest.STATUS_DJ_REJECTED).count(),
-            'admin_approved': all_songs.filter(status=SongRequest.STATUS_ADMIN_APPROVED).count(),
-            'admin_rejected': all_songs.filter(status=SongRequest.STATUS_ADMIN_REJECTED).count(),
-            'pending': all_songs.filter(status=SongRequest.STATUS_PENDING).count(),
+            'total': len(all_songs_qs),
+            'dj_approved': sum(1 for s in all_songs_qs if s['status'] == SongRequest.STATUS_DJ_APPROVED),
+            'dj_rejected': sum(1 for s in all_songs_qs if s['status'] == SongRequest.STATUS_DJ_REJECTED),
+            'admin_approved': sum(1 for s in all_songs_qs if s['status'] == SongRequest.STATUS_ADMIN_APPROVED),
+            'admin_rejected': sum(1 for s in all_songs_qs if s['status'] == SongRequest.STATUS_ADMIN_REJECTED),
+            'pending': sum(1 for s in all_songs_qs if s['status'] == SongRequest.STATUS_PENDING),
         }
 
-        # Screen status breakdown
         screen_requests = {
-            'total': all_screens.count(),
-            'paid': all_screens.filter(status=ScreenRequest.STATUS_PAID).count(),
-            'played': all_screens.filter(status=ScreenRequest.STATUS_PLAYED).count(),
-            'rejected': all_screens.filter(status=ScreenRequest.STATUS_REJECTED).count(),
-            'pending_review': all_screens.filter(status=ScreenRequest.STATUS_PENDING_REVIEW).count(),
+            'total': len(all_screens_qs),
+            'paid': sum(1 for s in all_screens_qs if s['status'] == ScreenRequest.STATUS_PAID),
+            'played': sum(1 for s in all_screens_qs if s['status'] == ScreenRequest.STATUS_PLAYED),
+            'rejected': sum(1 for s in all_screens_qs if s['status'] == ScreenRequest.STATUS_REJECTED),
+            'pending_review': sum(1 for s in all_screens_qs if s['status'] == ScreenRequest.STATUS_PENDING_REVIEW),
         }
 
-        # Screen type breakdown
         screen_types = {}
         for type_key, type_name in [
             (ScreenRequest.TYPE_RUNNING_TEXT, 'Running Text'),
@@ -106,31 +160,33 @@ class ReportSummaryView(APIView):
             (ScreenRequest.TYPE_VTRON_PHOTO, 'Vtron Photo'),
             (ScreenRequest.TYPE_VTRON_VIDEO, 'Vtron Video'),
         ]:
-            qs = all_screens.filter(
-                request_type=type_key,
-                status__in=[ScreenRequest.STATUS_PAID, ScreenRequest.STATUS_PLAYED]
-            )
+            paid = [
+                s for s in all_screens_qs
+                if s['request_type'] == type_key
+                and s['status'] in (ScreenRequest.STATUS_PAID, ScreenRequest.STATUS_PLAYED)
+            ]
             screen_types[type_key] = {
                 'name': type_name,
-                'count': qs.count(),
-                'revenue': float(qs.aggregate(t=Sum('donation_amount'))['t'] or 0),
+                'count': len(paid),
+                'revenue': sum(float(s['donation_amount']) for s in paid),
             }
 
-        # Top 5 songs
-        top_songs = list(
-            all_songs
-            .filter(status=SongRequest.STATUS_DJ_APPROVED)
-            .values('song_title', 'artist')
-            .annotate(count=Count('id'))
-            .order_by('-count')[:5]
+        song_counter = Counter(
+            (s['song_title'], s['artist'])
+            for s in all_songs_qs
+            if s['status'] == SongRequest.STATUS_DJ_APPROVED
         )
+        top_songs = [
+            {'song_title': t, 'artist': a, 'count': c}
+            for (t, a), c in song_counter.most_common(5)
+        ]
 
-        # Best night
         best_night = max(nightly, key=lambda x: x['total']) if nightly else None
 
         return Response({
-            'period': period,
+            'period': period_label,
             'nights': nights_count,
+            'group_by': group_by,
             'total_revenue': total_rev,
             'song_revenue': total_song_rev,
             'screen_revenue': total_screen_rev,
